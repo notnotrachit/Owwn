@@ -5,8 +5,9 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
 import { useState, useRef } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck, Settings } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
+import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '~/components/ui/drawer'
 
 function GroupDetailSkeleton() {
   return (
@@ -45,9 +46,11 @@ function GroupDetail() {
   const navigate = useNavigate()
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members' | 'settings'>('overview')
+  const [editingName, setEditingName] = useState('')
+  const [editingDescription, setEditingDescription] = useState('')
 
-  const tabs = ['overview', 'expenses', 'members'] as const
+  const tabs = ['overview', 'expenses', 'members', 'settings'] as const
   const startXRef = useRef(0)
   const startYRef = useRef(0)
   const trackingRef = useRef(false)
@@ -470,12 +473,50 @@ function GroupDetail() {
           </div>
         </div>
         )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+            <h2 className="text-xl font-semibold text-white mb-6">Group Settings</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  defaultValue={group.name}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
+                  placeholder="Group name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Description
+                </label>
+                <textarea
+                  defaultValue={group.description || ''}
+                  onChange={(e) => setEditingDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
+                  placeholder="Group description"
+                  rows={3}
+                />
+              </div>
+              <button
+                className="w-full bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
-      {/* Add Expense Modal */}
-      <AnimatePresence>
-        {showAddExpense && (
-          <AddExpenseModal
+      {/* Add Expense Drawer - Mobile */}
+      <Drawer open={showAddExpense} onOpenChange={setShowAddExpense}>
+        <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
+          <AddExpenseDrawer
             groupId={groupId as any}
             members={group.members}
             currentUserId={user._id}
@@ -483,6 +524,22 @@ function GroupDetail() {
             currencyCode={group.currency || "USD"}
             onClose={() => setShowAddExpense(false)}
           />
+        </DrawerContent>
+      </Drawer>
+
+      {/* Add Expense Modal - Desktop only */}
+      <AnimatePresence>
+        {showAddExpense && (
+          <div className="hidden md:block">
+            <AddExpenseModal
+              groupId={groupId as any}
+              members={group.members}
+              currentUserId={user._id}
+              currencySymbol={group.currencySymbol || "$"}
+              currencyCode={group.currency || "USD"}
+              onClose={() => setShowAddExpense(false)}
+            />
+          </div>
         )}
       </AnimatePresence>
 
@@ -497,50 +554,210 @@ function GroupDetail() {
         )}
       </AnimatePresence>
 
-      {/* Bottom Tab Bar - Mobile */}
+      {/* Bottom Tab Bar - Mobile (5 tabs) */}
       <div className="md:hidden fixed inset-x-0 bottom-0 z-50 pb-safe px-safe">
-        <div className="max-w-7xl mx-auto px-4 pb-4">
+        <div className="max-w-7xl mx-auto px-2 pb-3">
           <div className="bg-[#101418] border border-[#10B981]/30 rounded-2xl shadow-2xl p-1 flex items-center justify-between">
             <button
-              aria-label="Overview"
               onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
                 activeTab === 'overview' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
               }`}
             >
               <div className="flex flex-col items-center gap-1">
-                <LayoutGrid className="w-5 h-5" />
-                <span className="text-[11px]">Overview</span>
+                <LayoutGrid className="w-4 h-4" />
+                <span className="text-[10px]">Overview</span>
               </div>
             </button>
             <button
-              aria-label="Expenses"
               onClick={() => setActiveTab('expenses')}
-              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
                 activeTab === 'expenses' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
               }`}
             >
               <div className="flex flex-col items-center gap-1">
-                <CreditCard className="w-5 h-5" />
-                <span className="text-[11px]">Expenses</span>
+                <CreditCard className="w-4 h-4" />
+                <span className="text-[10px]">Expenses</span>
               </div>
             </button>
             <button
-              aria-label="Members"
+              onClick={() => setShowAddExpense(true)}
+              className="flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors text-[#10B981] hover:bg-[#10B981]/20"
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Plus className="w-5 h-5" />
+                <span className="text-[10px]">Add</span>
+              </div>
+            </button>
+            <button
               onClick={() => setActiveTab('members')}
-              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
                 activeTab === 'members' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
               }`}
             >
               <div className="flex flex-col items-center gap-1">
-                <UserCheck className="w-5 h-5" />
-                <span className="text-[11px]">Members</span>
+                <UserCheck className="w-4 h-4" />
+                <span className="text-[10px]">Members</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
+                activeTab === 'settings' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <Settings className="w-4 h-4" />
+                <span className="text-[10px]">Settings</span>
               </div>
             </button>
           </div>
         </div>
       </div>
     </motion.div>
+  )
+}
+
+function AddExpenseDrawer({
+  groupId,
+  members,
+  currentUserId,
+  currencySymbol,
+  currencyCode,
+  onClose,
+}: {
+  groupId: any
+  members: any[]
+  currentUserId: any
+  currencySymbol: string
+  currencyCode: string
+  onClose: () => void
+}) {
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [paidBy, setPaidBy] = useState(currentUserId)
+  const [splitBetween, setSplitBetween] = useState<string[]>([currentUserId])
+  const createExpense = useMutation(api.expenses.createExpense)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!description || !amount || !paidBy || splitBetween.length === 0) return
+
+    try {
+      await createExpense({
+        groupId,
+        description,
+        amount: Math.round(parseFloat(amount) * 100),
+        paidBy: paidBy as any,
+        currency: currencyCode,
+        date: Date.now(),
+        splitType: 'equal',
+        splits: splitBetween.map(userId => ({ userId: userId as any, amount: 0 })),
+      })
+      setDescription('')
+      setAmount('')
+      setPaidBy(currentUserId)
+      setSplitBetween([currentUserId])
+      onClose()
+    } catch (error) {
+      console.error('Failed to add expense:', error)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+      <h2 className="text-xl font-bold text-white mb-6">Add Expense</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Description *
+          </label>
+          <input
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
+            placeholder="e.g., Dinner, Gas"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Amount ({currencySymbol}) *
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
+            placeholder="0.00"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Paid by *
+          </label>
+          <select
+            value={paidBy}
+            onChange={(e) => setPaidBy(e.target.value)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all text-sm"
+            required
+          >
+            {members.map((member: any) => (
+              <option key={member._id} value={member._id}>
+                {member.name || member.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Split between *
+          </label>
+          <div className="space-y-2 max-h-32 overflow-y-auto">
+            {members.map((member: any) => (
+              <label key={member._id} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={splitBetween.includes(member._id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSplitBetween([...splitBetween, member._id])
+                    } else {
+                      setSplitBetween(splitBetween.filter(id => id !== member._id))
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-2 border-[#10B981]/30 bg-[#111827] cursor-pointer"
+                />
+                <span className="text-sm text-white/80">{member.name || member.email}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 border-2 border-[#10B981]/30 text-white rounded-xl hover:bg-[#10B981]/10 transition-colors text-sm font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </div>
+      </form>
+    </div>
   )
 }
 

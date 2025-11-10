@@ -1,10 +1,26 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '~/lib/auth-context'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
-import { Users, ArrowRight, Receipt, TrendingUp, Sparkles, LogOut } from 'lucide-react'
+import { Users, ArrowRight, Receipt, TrendingUp, Sparkles, LogOut, Plus, DollarSign } from 'lucide-react'
 import { motion } from 'motion/react'
+import { Drawer, DrawerContent, DrawerTrigger } from '~/components/ui/drawer'
+import { useState } from 'react'
+import { useMutation } from 'convex/react'
+
+const CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+]
 
 const container = {
   hidden: { opacity: 0 },
@@ -24,6 +40,125 @@ const item = {
 export const Route = createFileRoute('/')({
   component: Home,
 })
+
+function CreateGroupDrawer() {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [currency, setCurrency] = useState('USD')
+  const [isOpen, setIsOpen] = useState(false)
+  const createGroup = useMutation(api.groups.createGroup)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name || !user) return
+
+    try {
+      const selectedCurrency = CURRENCIES.find(c => c.code === currency)!
+      const groupId = await createGroup({
+        name,
+        description: description || undefined,
+        createdBy: user._id,
+        currency: selectedCurrency.code,
+        currencySymbol: selectedCurrency.symbol,
+      })
+      setIsOpen(false)
+      setName('')
+      setDescription('')
+      setCurrency('USD')
+      navigate({ to: '/groups/$groupId', params: { groupId } })
+    } catch (error) {
+      console.error('Failed to create group:', error)
+    }
+  }
+
+  return (
+    <Drawer open={isOpen} onOpenChange={setIsOpen}>
+      <DrawerTrigger asChild>
+        <button className="sm:hidden fixed bottom-6 right-6 b-safe-4 r-safe-4 z-40 w-14 h-14 rounded-full bg-[#10B981] hover:bg-[#059669] text-white flex items-center justify-center shadow-lg transition-all">
+          <Plus className="w-6 h-6" />
+        </button>
+      </DrawerTrigger>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
+      )}
+      <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
+        <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+          <h2 className="text-xl font-bold text-white mb-6">Create New Group</h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Group Name *
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
+                placeholder="e.g., Roommates, Trip to Paris"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Description (optional)
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
+                placeholder="What's this group for?"
+                rows={2}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Currency *
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <DollarSign className="w-4 h-4 text-white/50" />
+                </div>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all text-sm"
+                  required
+                >
+                  {CURRENCIES.map((curr) => (
+                    <option key={curr.code} value={curr.code}>
+                      {curr.symbol} - {curr.name} ({curr.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="flex-1 px-4 py-2.5 border-2 border-[#10B981]/30 text-white rounded-xl hover:bg-[#10B981]/10 transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+              >
+                <Users className="w-4 h-4" />
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  )
+}
 
 function Home() {
   const { user, isLoading, signInWithGoogle } = useAuth()
@@ -143,7 +278,7 @@ function Dashboard({ user }: { user: { _id: any; name: string; email: string } }
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-28 sm:pb-8">
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-3xl font-bold text-white mb-2">
@@ -153,13 +288,15 @@ function Dashboard({ user }: { user: { _id: any; name: string; email: string } }
               Manage your shared expenses and settlements
             </p>
           </div>
-          <Link
-            to="/groups/new"
-            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
-          >
-            <Users className="w-5 h-5" />
-            Create Group
-          </Link>
+          {groups.length === 0 && (
+            <Link
+              to="/groups/new"
+              className="hidden sm:flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
+            >
+              <Users className="w-5 h-5" />
+              Create Group
+            </Link>
+          )}
         </div>
 
         {groups.length === 0 ? (
@@ -239,6 +376,18 @@ function Dashboard({ user }: { user: { _id: any; name: string; email: string } }
           </motion.div>
         )}
       </main>
+
+      {/* Create Group Drawer - Mobile */}
+      <CreateGroupDrawer />
+      
+      {/* Create Group Button - Desktop only */}
+      <Link
+        to="/groups/new"
+        className="hidden sm:flex fixed bottom-6 right-6 items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg"
+      >
+        <Users className="w-5 h-5" />
+        Create Group
+      </Link>
     </div>
   )
 }
