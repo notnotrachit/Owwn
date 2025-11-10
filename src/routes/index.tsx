@@ -7,12 +7,27 @@ import { api } from '../../convex/_generated/api'
 import { Users, ArrowRight, Receipt, TrendingUp, Sparkles, LogOut } from 'lucide-react'
 import { motion } from 'motion/react'
 
+const container = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
+
+const item = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+}
+
 export const Route = createFileRoute('/')({
   component: Home,
 })
 
 function Home() {
-  const { user, signIn, signUp, signOut } = useAuth()
+  const { user, signIn, signUp } = useAuth()
 
   const [isSignUp, setIsSignUp] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
@@ -43,13 +58,13 @@ function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+      <div className="min-h-[100dvh] bg-[#0A0F12] flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-800">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gray-900 text-white mb-4">
               <Sparkles className="w-7 h-7" />
             </div>
-            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">Owwn</h1>
+            <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2 font-audiowide">Owwn</h1>
             <p className="text-gray-600 dark:text-gray-300">Own what you owe</p>
           </div>
 
@@ -167,7 +182,7 @@ function Home() {
               <button
                 type="button"
                 onClick={() => setShowAuth(false)}
-                className="w-full text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 py-2"
+                className="flex items-center gap-2 text-[#A5D7E8]/80 hover:text-[#A5D7E8] transition-colors py-2"
               >
                 Back
               </button>
@@ -178,48 +193,43 @@ function Home() {
     )
   }
 
-  return <Dashboard user={user} onLogout={signOut} />
+  return <Dashboard user={user} />
 }
 
-function Dashboard({
-  user,
-  onLogout,
-}: {
-  user: { _id: any; name: string; email: string }
-  onLogout: () => void
-}) {
-  const { data: groups } = useSuspenseQuery(
+function Dashboard({ user }: { user: { _id: any; name: string; email: string } }) {
+  const { signOut } = useAuth()
+  const { data: groups = [] } = useSuspenseQuery(
     convexQuery(api.groups.getUserGroups, { userId: user._id })
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-[100dvh] bg-[#0A0F12]">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+      <header className="bg-[#101418]/80 backdrop-blur-md border-b border-[#10B981]/30 shadow-lg sticky top-0 z-50 pt-safe px-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Owwn</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <h1 className="text-3xl font-bold text-white font-audiowide">Owwn</h1>
+              <p className="text-xs text-white/50">
                 Own what you owe
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-white">
                 {user.name || user.email}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-white/60">
                 {user.email}
               </p>
             </div>
             <button
-              onClick={onLogout}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              onClick={signOut}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-[#10B981]/20 rounded-lg transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Logout</span>
@@ -232,16 +242,16 @@ function Dashboard({
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <h2 className="text-3xl font-bold text-white mb-2">
               Your Groups
             </h2>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-white/70">
               Manage your shared expenses and settlements
             </p>
           </div>
           <Link
             to="/groups/new"
-            className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl"
           >
             <Users className="w-5 h-5" />
             Create Group
@@ -253,7 +263,7 @@ function Dashboard({
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 dark:bg-gray-800 mb-6">
               <Users className="w-10 h-10 text-gray-700 dark:text-gray-300" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-2xl font-bold text-white mb-3">
               No groups yet
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md mx-auto">
@@ -261,7 +271,7 @@ function Dashboard({
             </p>
             <Link
               to="/groups/new"
-              className="inline-flex items-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-3 px-8 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg"
             >
               <Users className="w-5 h-5" />
               Create Your First Group
@@ -269,50 +279,63 @@ function Dashboard({
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={container}
+            initial="hidden"
+            animate="show"
+          >
             {groups.map((group: any) => (
-              <Link
+              <motion.div
                 key={group._id}
-                to="/groups/$groupId"
-                params={{ groupId: group._id }}
-                className="group bg-white dark:bg-gray-900 rounded-2xl shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200 dark:border-gray-800"
+                variants={item}
+                whileHover={{ scale: 1.02, y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
               >
+                <Link
+                  to="/groups/$groupId"
+                  params={{ groupId: group._id }}
+                  className="block group bg-[#101418] rounded-2xl shadow-lg hover:shadow-2xl transition-all p-6 border border-[#10B981]/30 hover:border-[#10B981]"
+                >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
                         <Users className="w-5 h-5" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        <h3 className="text-lg font-bold text-white">
                           {group.name}
                         </h3>
                       </div>
                     </div>
                     {group.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                      <p className="text-sm text-white/70 line-clamp-2">
                         {group.description}
                       </p>
                     )}
                   </div>
                   {group.role === 'admin' && (
-                    <span className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-semibold px-3 py-1 rounded-full border border-gray-200 dark:border-gray-700">
+                    <span className="bg-[#10B981] text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
                       Admin
                     </span>
                   )}
                 </div>
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex items-center justify-between pt-4 border-t border-[#10B981]/20">
+                  <div className="flex items-center gap-2 text-sm text-white/80">
                     <Users className="w-4 h-4" />
                     <span className="font-medium">{group.memberCount} members</span>
                   </div>
-                  <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
+                  <ArrowRight className="w-5 h-5 text-white/40 group-hover:text-[#10B981] transition-colors" />
                 </div>
               </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </main>
     </div>
   )
 }
+

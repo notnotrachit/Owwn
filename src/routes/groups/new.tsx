@@ -55,22 +55,22 @@ function NewGroup() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+    <div className="min-h-[100dvh] bg-[#0A0F12]">
+      <header className="bg-[#101418]/80 backdrop-blur-md shadow-lg border-b border-[#10B981]/30 sticky top-0 z-40 pt-safe px-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate({ to: '/' })}
-              className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="hidden sm:inline">Back</span>
             </button>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
                 <Users className="w-5 h-5" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-white">
                 Create New Group
               </h1>
             </div>
@@ -79,47 +79,47 @@ function NewGroup() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-gray-800">
+        <div className="bg-[#101418] rounded-2xl shadow-xl p-8 border border-[#10B981]/30">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Group Name *
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-900 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
                 placeholder="e.g., Roommates, Trip to Paris"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Description (optional)
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-900 dark:bg-gray-700 dark:text-white"
+                className="w-full px-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
                 placeholder="What's this group for?"
                 rows={3}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-white mb-2">
                 Currency *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <DollarSign className="w-5 h-5 text-gray-400" />
+                  <DollarSign className="w-5 h-5 text-white/50" />
                 </div>
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-gray-900 dark:bg-gray-700 dark:text-white appearance-none cursor-pointer"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all"
                   required
                 >
                   {CURRENCIES.map((curr) => (
@@ -129,7 +129,7 @@ function NewGroup() {
                   ))}
                 </select>
               </div>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+              <p className="mt-2 text-sm text-white/70">
                 All expenses in this group will use {CURRENCIES.find(c => c.code === currency)?.name}
               </p>
             </div>
@@ -138,13 +138,13 @@ function NewGroup() {
               <button
                 type="button"
                 onClick={() => navigate({ to: '/' })}
-                className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 px-6 py-3 border-2 border-[#10B981]/30 text-white rounded-xl hover:bg-[#10B981]/10 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-gray-900 hover:bg-black text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 <Users className="w-5 h-5" />
                 Create Group

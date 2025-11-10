@@ -4,29 +4,29 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 
 function GroupDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+    <div className="min-h-[100dvh] bg-[#0A0F12]">
+      <header className="bg-[#101418]/80 backdrop-blur-md shadow-lg border-b border-[#10B981]/30 sticky top-0 z-40 pt-safe px-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-800 rounded-lg animate-pulse" />
-              <div className="w-40 h-6 bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+              <div className="w-8 h-8 bg-white/10 rounded-lg animate-pulse" />
+              <div className="w-40 h-6 bg-white/10 rounded animate-pulse" />
             </div>
-            <div className="w-32 h-10 bg-gray-200 dark:bg-gray-800 rounded-xl animate-pulse" />
+            <div className="w-32 h-10 bg-white/10 rounded-xl animate-pulse" />
           </div>
         </div>
       </header>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 mb-6 border border-gray-200 dark:border-gray-700">
+        <div className="bg-[#101418] rounded-2xl shadow-xl p-8 mb-6 border border-[#10B981]/30">
           <div className="text-center py-8">
-            <div className="w-32 h-32 mx-auto bg-gray-200 dark:bg-gray-800 rounded-full animate-pulse mb-4" />
-            <div className="w-48 h-8 mx-auto bg-gray-200 dark:bg-gray-800 rounded animate-pulse" />
+            <div className="w-32 h-32 mx-auto bg-white/10 rounded-full animate-pulse mb-4" />
+            <div className="w-48 h-8 mx-auto bg-white/10 rounded animate-pulse" />
           </div>
         </div>
       </main>
@@ -46,6 +46,42 @@ function GroupDetail() {
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members'>('overview')
+
+  const tabs = ['overview', 'expenses', 'members'] as const
+  const startXRef = useRef(0)
+  const startYRef = useRef(0)
+  const trackingRef = useRef(false)
+  const swipedRef = useRef(false)
+
+  const goNextTab = () => {
+    const i = tabs.indexOf(activeTab)
+    if (i < tabs.length - 1) setActiveTab(tabs[i + 1])
+  }
+  const goPrevTab = () => {
+    const i = tabs.indexOf(activeTab)
+    if (i > 0) setActiveTab(tabs[i - 1])
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    startXRef.current = t.clientX
+    startYRef.current = t.clientY
+    trackingRef.current = true
+    swipedRef.current = false
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!trackingRef.current || swipedRef.current) return
+    const t = e.touches[0]
+    const dx = t.clientX - startXRef.current
+    const dy = t.clientY - startYRef.current
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return
+    if (dx < 0) goNextTab()
+    else goPrevTab()
+    swipedRef.current = true
+  }
+  const handleTouchEnd = () => {
+    trackingRef.current = false
+  }
 
   const { data: group } = useSuspenseQuery(
     convexQuery(api.groups.getGroupDetails, { groupId: groupId as any })
@@ -68,16 +104,16 @@ function GroupDetail() {
   if (!user) {
     return (
       <motion.div 
-        className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"
+        className="min-h-[100dvh] bg-[#0A0F12] flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Authentication Required</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Please sign in to view this group.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Authentication Required</h2>
+          <p className="text-white/70 mb-4">Please sign in to view this group.</p>
           <button
             onClick={() => navigate({ to: '/' })}
-            className="bg-gray-900 hover:bg-black text-white font-semibold py-2 px-6 rounded-xl transition-colors"
+            className="bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-6 rounded-xl transition-all shadow-lg"
           >
             Go to Sign In
           </button>
@@ -90,16 +126,16 @@ function GroupDetail() {
   if (!group) {
     return (
       <motion.div 
-        className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"
+        className="min-h-[100dvh] bg-[#0A0F12] flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Group not found</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">This group doesn't exist or you don't have access to it.</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Group not found</h2>
+          <p className="text-white/70 mb-4">This group doesn't exist or you don't have access to it.</p>
           <button
             onClick={() => navigate({ to: '/' })}
-            className="bg-gray-900 hover:bg-black text-white font-semibold py-2 px-6 rounded-xl transition-colors"
+            className="bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-6 rounded-xl transition-all shadow-lg"
           >
             Go to Dashboard
           </button>
@@ -112,33 +148,33 @@ function GroupDetail() {
 
   return (
     <motion.div 
-      className="min-h-screen bg-gray-50 dark:bg-gray-950"
+      className="min-h-[100dvh] bg-[#0A0F12]"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-800 sticky top-0 z-40">
+      <header className="bg-[#101418]/80 backdrop-blur-md shadow-lg border-b border-[#10B981]/30 sticky top-0 z-40 pt-safe px-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate({ to: '/' })}
-                className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="hidden sm:inline">Back</span>
               </button>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                  <h1 className="text-xl sm:text-2xl font-bold text-white">
                     {group.name}
                   </h1>
                   {group.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-sm text-white/70">
                       {group.description}
                     </p>
                   )}
@@ -146,15 +182,15 @@ function GroupDetail() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                <Users className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#10B981]/20 rounded-lg border border-[#10B981]/30">
+                <Users className="w-4 h-4 text-white/70" />
+                <span className="text-sm font-medium text-white">
                   {group.members.length} {group.members.length === 1 ? 'member' : 'members'}
                 </span>
               </div>
               <button
                 onClick={() => setShowAddExpense(true)}
-                className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-2 px-4 sm:px-6 rounded-xl transition-colors"
+                className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 sm:px-6 rounded-xl transition-all shadow-lg"
               >
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">Add Expense</span>
@@ -164,42 +200,63 @@ function GroupDetail() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab Navigation */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-1 mb-6 border border-gray-200 dark:border-gray-800">
-          <div className="grid grid-cols-3 gap-1">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+        {/* Tab Navigation - Improved with smooth animations */}
+        <div className="hidden md:block bg-[#101418] rounded-2xl shadow-lg p-1.5 mb-6 border border-[#10B981]/30">
+          <div className="grid grid-cols-3 gap-2 relative">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+              className={`relative flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold transition-colors z-10 ${
                 activeTab === 'overview'
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white'
+                  : 'text-white/70 hover:text-white hover:bg-[#10B981]/20'
               }`}
             >
-              <LayoutGrid className="w-4 h-4" />
-              <span className="hidden sm:inline">Overview</span>
+              {activeTab === 'overview' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-[#10B981] rounded-xl shadow-lg"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <LayoutGrid className="w-5 h-5 relative z-10" />
+              <span className="hidden sm:inline relative z-10">Overview</span>
             </button>
             <button
               onClick={() => setActiveTab('expenses')}
-              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+              className={`relative flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold transition-colors z-10 ${
                 activeTab === 'expenses'
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white'
+                  : 'text-white/70 hover:text-white hover:bg-[#10B981]/20'
               }`}
             >
-              <CreditCard className="w-4 h-4" />
-              <span className="hidden sm:inline">Expenses</span>
+              {activeTab === 'expenses' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-[#10B981] rounded-xl shadow-lg"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <CreditCard className="w-5 h-5 relative z-10" />
+              <span className="hidden sm:inline relative z-10">Expenses</span>
             </button>
             <button
               onClick={() => setActiveTab('members')}
-              className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-medium transition-all ${
+              className={`relative flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl font-semibold transition-colors z-10 ${
                 activeTab === 'members'
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-white'
+                  : 'text-white/70 hover:text-white hover:bg-[#10B981]/20'
               }`}
             >
-              <UserCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Members</span>
+              {activeTab === 'members' && (
+                <motion.div
+                  layoutId="activeTab"
+                  className="absolute inset-0 bg-[#10B981] rounded-xl shadow-lg"
+                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+              <UserCheck className="w-5 h-5 relative z-10" />
+              <span className="hidden sm:inline relative z-10">Members</span>
             </button>
           </div>
         </div>
@@ -208,12 +265,12 @@ function GroupDetail() {
         {activeTab === 'overview' && (
           <>
             {/* Balance Summary */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 mb-8 border border-gray-200 dark:border-gray-700">
+            <div className="bg-[#101418] rounded-2xl shadow-xl p-8 mb-8 border border-[#10B981]/30">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
               <DollarSign className="w-5 h-5" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-2xl font-bold text-white">
               Your Balance
             </h2>
           </div>
@@ -230,7 +287,7 @@ function GroupDetail() {
               >
                 {group.currencySymbol || '$'}{(Math.abs(userBalance.balance) / 100).toFixed(2)}
               </div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-gray-700">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#10B981]/20 border border-[#10B981]/30">
                 <TrendingUp className={`w-5 h-5 ${
                   userBalance.balance > 0
                     ? 'text-green-600 dark:text-green-400'
@@ -238,7 +295,7 @@ function GroupDetail() {
                       ? 'text-red-600 dark:text-red-400'
                       : 'text-gray-600 dark:text-gray-400'
                 }`} />
-                <span className="text-lg font-medium text-gray-700 dark:text-gray-300">
+                <span className="text-lg font-medium text-white">
                   {userBalance.balance > 0
                     ? 'You are owed'
                     : userBalance.balance < 0
@@ -250,10 +307,10 @@ function GroupDetail() {
           ) : (
             <div className="text-center py-8">
               <Receipt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-lg text-gray-600 dark:text-gray-400">
+              <p className="text-lg text-white/70">
                 No expenses yet
               </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              <p className="text-sm text-white/50 mt-2">
                 Add your first expense to get started
               </p>
             </div>
@@ -262,26 +319,26 @@ function GroupDetail() {
 
         {/* Suggested Settlements */}
         {balances.settlements.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+            <h2 className="text-xl font-semibold text-white mb-4">
               Suggested Settlements
             </h2>
             <div className="space-y-3">
               {balances.settlements.map((settlement, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  className="flex items-center justify-between p-4 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-gray-900 dark:text-white font-medium">
+                    <span className="text-white font-medium">
                       {settlement.fromName}
                     </span>
-                    <span className="text-gray-600 dark:text-gray-400">→</span>
-                    <span className="text-gray-900 dark:text-white font-medium">
+                    <span className="text-white/50">→</span>
+                    <span className="text-white font-medium">
                       {settlement.toName}
                     </span>
                   </div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <div className="text-lg font-semibold text-[#10B981]">
                     {group.currencySymbol || '$'}{(settlement.amount / 100).toFixed(2)}
                   </div>
                 </div>
@@ -294,51 +351,55 @@ function GroupDetail() {
 
         {/* Expenses Tab */}
         {activeTab === 'expenses' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-white">
                 All Expenses
               </h2>
               <button
                 onClick={() => setShowAddExpense(true)}
-                className="flex items-center gap-2 bg-gray-900 hover:bg-black text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md"
               >
                 <Plus className="w-4 h-4" />
                 Add Expense
               </button>
             </div>
             {expenses.length === 0 ? (
-              <div className="text-center py-16 text-gray-600 dark:text-gray-400">
+              <div className="text-center py-16 text-white/70">
                 <Receipt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <p className="text-lg font-medium mb-2">No expenses yet</p>
                 <p className="text-sm">Add your first expense to get started</p>
               </div>
             ) : (
               <div className="space-y-3">
-                {expenses.map((expense) => (
-                  <div
+                {expenses.map((expense, index) => (
+                  <motion.div
                     key={expense._id}
-                    className="p-5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-100 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.3 }}
+                    whileHover={{ scale: 1.01, x: 4 }}
+                    className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <div className="font-semibold text-lg text-gray-900 dark:text-white mb-1">
+                        <div className="font-semibold text-lg text-white mb-1">
                           {expense.description}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                        <div className="text-sm text-white/70">
                           Paid by <span className="font-medium">{expense.paidByName}</span> •{' '}
                           {new Date(expense.date).toLocaleDateString()}
                         </div>
                       </div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white">
+                      <div className="text-xl font-bold text-[#10B981]">
                         {group.currencySymbol || '$'}{(expense.amount / 100).toFixed(2)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-white/60">
                       <Users className="w-3.5 h-3.5" />
                       Split between {expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -347,40 +408,44 @@ function GroupDetail() {
 
         {/* Members Tab */}
         {activeTab === 'members' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-white">
               Members ({group.members.length})
             </h2>
             <button
               onClick={() => setShowAddMember(true)}
-              className="text-sm text-gray-900 dark:text-gray-100 hover:underline"
+              className="text-sm text-[#10B981] hover:text-[#059669] transition-colors font-medium"
             >
               + Add Member
             </button>
           </div>
           <div className="space-y-2">
-            {group.members.map((member: any) => {
+            {group.members.map((member: any, index: number) => {
               const memberBalance = balances.balances.find(
                 (b) => b.userId === member._id
               )
               const displayName = member.name || member.email || 'Unknown User'
               return (
-                <div
+                <motion.div
                   key={member._id}
-                  className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                  whileHover={{ scale: 1.01, x: 4 }}
+                  className="flex items-center justify-between p-3 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20"
                 >
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">
+                    <div className="font-medium text-white">
                       {displayName}
                       {member.role === 'admin' && (
-                        <span className="ml-2 text-xs bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-0.5 rounded">
+                        <span className="ml-2 text-xs bg-[#10B981] text-white px-2 py-0.5 rounded shadow-sm">
                           Admin
                         </span>
                       )}
                     </div>
                     {member.name && member.email && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                      <div className="text-sm text-white/70">
                         {member.email}
                       </div>
                     )}
@@ -399,7 +464,7 @@ function GroupDetail() {
                       {(Math.abs(memberBalance.balance) / 100).toFixed(2)}
                     </div>
                   )}
-                </div>
+                </motion.div>
               )
             })}
           </div>
@@ -431,6 +496,50 @@ function GroupDetail() {
           />
         )}
       </AnimatePresence>
+
+      {/* Bottom Tab Bar - Mobile */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-50 pb-safe px-safe">
+        <div className="max-w-7xl mx-auto px-4 pb-4">
+          <div className="bg-[#101418] border border-[#10B981]/30 rounded-2xl shadow-2xl p-1 flex items-center justify-between">
+            <button
+              aria-label="Overview"
+              onClick={() => setActiveTab('overview')}
+              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+                activeTab === 'overview' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <LayoutGrid className="w-5 h-5" />
+                <span className="text-[11px]">Overview</span>
+              </div>
+            </button>
+            <button
+              aria-label="Expenses"
+              onClick={() => setActiveTab('expenses')}
+              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+                activeTab === 'expenses' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <CreditCard className="w-5 h-5" />
+                <span className="text-[11px]">Expenses</span>
+              </div>
+            </button>
+            <button
+              aria-label="Members"
+              onClick={() => setActiveTab('members')}
+              className={`flex-1 py-2.5 mx-1 rounded-xl text-center transition-colors ${
+                activeTab === 'members' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1">
+                <UserCheck className="w-5 h-5" />
+                <span className="text-[11px]">Members</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
     </motion.div>
   )
 }
@@ -505,7 +614,7 @@ function AddExpenseModal({
     >
       {/* Mobile: Full screen, Desktop: Modal */}
       <motion.div 
-        className="h-full md:h-auto bg-white dark:bg-gray-900 md:rounded-2xl md:shadow-2xl md:max-w-lg w-full flex flex-col md:max-h-[90vh]"
+        className="h-full md:h-auto bg-[#101418] md:rounded-2xl md:shadow-2xl md:max-w-lg w-full flex flex-col md:max-h-[90vh]"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -514,16 +623,16 @@ function AddExpenseModal({
       >
         
         {/* Sticky Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 sm:px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="sticky top-0 bg-[#101418] border-b border-[#10B981]/30 px-4 sm:px-6 py-4 flex items-center justify-between z-10 pt-safe px-safe">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">
             Add Expense
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-2 hover:bg-[#10B981]/20 rounded-lg transition-colors"
             aria-label="Close"
           >
-            <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
+            <X className="w-6 h-6 text-white/70" />
           </button>
         </div>
 
@@ -533,14 +642,14 @@ function AddExpenseModal({
             
             {/* Description */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-white mb-2">
                 What was it for?
               </label>
               <input
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-3.5 text-base border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all"
+                className="w-full px-4 py-3.5 text-base border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
                 placeholder="e.g., Dinner, Groceries, Movie tickets"
                 required
                 autoFocus
@@ -549,11 +658,11 @@ function AddExpenseModal({
 
             {/* Amount - Most prominent */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-white mb-2">
                 Amount
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-gray-400">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-white/50">
                   {currencySymbol}
                 </span>
                 <input
@@ -561,7 +670,7 @@ function AddExpenseModal({
                   step="0.01"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 text-2xl font-bold border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all"
+                  className="w-full pl-12 pr-4 py-4 text-2xl font-bold border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
                   placeholder="0.00"
                   required
                 />
@@ -569,11 +678,11 @@ function AddExpenseModal({
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200 dark:border-gray-800"></div>
+            <div className="border-t border-[#10B981]/20"></div>
 
             {/* Paid by */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <label className="block text-sm font-semibold text-white mb-2">
                 Who paid?
               </label>
               <div className="grid grid-cols-1 gap-2">
@@ -584,24 +693,24 @@ function AddExpenseModal({
                     onClick={() => setPaidBy(member._id)}
                     className={`p-4 rounded-xl border-2 text-left transition-all ${
                       paidBy === member._id
-                        ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-gray-800'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        ? 'border-[#10B981] bg-[#10B981]/20'
+                        : 'border-[#10B981]/30 hover:border-[#10B981]/50'
                     }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                         paidBy === member._id
-                          ? 'border-gray-900 dark:border-white'
-                          : 'border-gray-300 dark:border-gray-600'
+                          ? 'border-[#10B981]'
+                          : 'border-white/30'
                       }`}>
                         {paidBy === member._id && (
-                          <div className="w-3 h-3 rounded-full bg-gray-900 dark:bg-white"></div>
+                          <div className="w-3 h-3 rounded-full bg-[#10B981]"></div>
                         )}
                       </div>
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <span className="font-medium text-white">
                         {member.name || member.email || 'Unknown User'}
                         {member._id === currentUserId && (
-                          <span className="ml-2 text-sm text-gray-500">(You)</span>
+                          <span className="ml-2 text-sm text-white/50">(You)</span>
                         )}
                       </span>
                     </div>
@@ -611,11 +720,11 @@ function AddExpenseModal({
             </div>
 
             {/* Divider */}
-            <div className="border-t border-gray-200 dark:border-gray-800"></div>
+            <div className="border-t border-[#10B981]/20"></div>
 
             {/* Split between */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              <label className="block text-sm font-semibold text-white mb-3">
                 Split between
               </label>
               
@@ -629,8 +738,8 @@ function AddExpenseModal({
                   }}
                   className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
                     splitMode === 'everyone'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-[#10B981] text-white'
+                      : 'bg-[#111827] text-white/70 hover:bg-[#111827]/70'
                   }`}
                 >
                   Everyone
@@ -640,8 +749,8 @@ function AddExpenseModal({
                   onClick={() => setSplitMode('custom')}
                   className={`flex-1 py-2.5 px-4 rounded-lg font-medium transition-all ${
                     splitMode === 'custom'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      ? 'bg-[#10B981] text-white'
+                      : 'bg-[#111827] text-white/70 hover:bg-[#111827]/70'
                   }`}
                 >
                   Custom
@@ -658,21 +767,21 @@ function AddExpenseModal({
                       onClick={() => toggleMember(member._id)}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         selectedMembers.includes(member._id)
-                          ? 'border-gray-900 dark:border-white bg-gray-50 dark:bg-gray-800'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          ? 'border-[#10B981] bg-[#10B981]/20'
+                          : 'border-[#10B981]/30 hover:border-[#10B981]/50'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                           selectedMembers.includes(member._id)
-                            ? 'border-gray-900 dark:border-white bg-gray-900 dark:bg-white'
-                            : 'border-gray-300 dark:border-gray-600'
-                        }`}>
-                          {selectedMembers.includes(member._id) && (
-                            <Check className="w-3.5 h-3.5 text-white dark:text-gray-900" />
-                          )}
+                          ? 'border-[#10B981] bg-[#10B981]'
+                          : 'border-white/30'
+                      }`}>
+                        {selectedMembers.includes(member._id) && (
+                          <Check className="w-3.5 h-3.5 text-white" />
+                        )}
                         </div>
-                        <span className="font-medium text-gray-900 dark:text-white">
+                        <span className="font-medium text-white">
                           {member.name || member.email || 'Unknown User'}
                         </span>
                       </div>
@@ -683,11 +792,11 @@ function AddExpenseModal({
 
               {/* Split Preview */}
               {selectedMembers.length > 0 && amount && (
-                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <div className="mt-4 p-4 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20">
+                  <p className="text-sm text-white/70 mb-1">
                     Each person pays
                   </p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-xl font-bold text-[#10B981]">
                     {currencySymbol}{(parseFloat(amount) / selectedMembers.length).toFixed(2)}
                   </p>
                 </div>
@@ -697,12 +806,12 @@ function AddExpenseModal({
         </form>
 
         {/* Sticky Footer */}
-        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 p-4 sm:p-6">
+        <div className="sticky bottom-0 bg-[#101418] border-t border-[#10B981]/30 p-4 sm:p-6 pb-safe px-safe">
           <div className="flex gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-4 px-6 text-base font-semibold border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="flex-1 py-4 px-6 text-base font-semibold border-2 border-[#10B981]/30 text-white rounded-xl hover:bg-[#10B981]/10 transition-colors"
             >
               Cancel
             </button>
@@ -710,7 +819,7 @@ function AddExpenseModal({
               type="submit"
               onClick={handleSubmit}
               disabled={selectedMembers.length === 0 || !amount || !description}
-              className="flex-1 py-4 px-6 text-base font-bold bg-gray-900 hover:bg-black disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
+              className="flex-1 py-4 px-6 text-base font-bold bg-[#10B981] hover:bg-[#059669] disabled:bg-[#10B981]/30 text-white rounded-xl transition-colors disabled:cursor-not-allowed"
             >
               Add Expense
             </button>
@@ -780,7 +889,7 @@ function AddMemberModal({
       onClick={onClose}
     >
       <motion.div 
-        className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-gray-700"
+        className="bg-[#101418] backdrop-blur-xl rounded-2xl shadow-2xl max-w-lg w-full border border-[#10B981]/30"
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -790,49 +899,49 @@ function AddMemberModal({
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gray-900 text-white flex items-center justify-center">
+              <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
                 <UserPlus className="w-5 h-5" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-white">
                 Add Member
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              className="text-white/70 hover:text-white transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg text-sm">
+            <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-white mb-1">
                 Search by email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="w-5 h-5 text-gray-400" />
+                  <Search className="w-5 h-5 text-white/50" />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-transparent dark:bg-gray-700 dark:text-white transition-all"
+                  className="w-full pl-10 pr-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
                   placeholder="Search by email address..."
                 />
               </div>
               <button
                 onClick={handleSearch}
                 disabled={isSearching || !email}
-                className="w-full bg-gray-900 hover:bg-black disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-[#10B981] hover:bg-[#059669] disabled:bg-[#10B981]/30 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mt-3"
               >
                 <Search className="w-5 h-5" />
                 {isSearching ? 'Searching...' : 'Search Users'}
@@ -841,7 +950,7 @@ function AddMemberModal({
 
             {searchResults.length > 0 && (
               <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <Check className="w-4 h-4 text-green-600" />
                   Found {searchResults.length} user{searchResults.length !== 1 ? 's' : ''}
                 </div>
@@ -849,18 +958,18 @@ function AddMemberModal({
                   {searchResults.map((user) => (
                     <div
                       key={user._id}
-                      className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 transition-all"
+                      className="flex items-center justify-between p-4 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20 hover:border-[#10B981]/40 transition-all"
                     >
                       <div className="flex items-center gap-3 flex-1">
-                        <div className="w-10 h-10 rounded-full bg-gray-900 text-white flex items-center justify-center font-semibold shadow-lg">
+                        <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center font-semibold shadow-lg">
                           {(user.name || user.email || 'U')[0].toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-semibold text-gray-900 dark:text-white">
+                          <div className="font-semibold text-white">
                             {user.name || user.email || 'Unknown User'}
                           </div>
                           {user.name && user.email && (
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <div className="text-sm text-white/70">
                               {user.email}
                             </div>
                           )}
@@ -868,7 +977,7 @@ function AddMemberModal({
                       </div>
                       <button
                         onClick={() => handleAddMember(user._id)}
-                        className="bg-gray-900 hover:bg-black text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        className="bg-[#10B981] hover:bg-[#059669] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
                       >
                         <UserPlus className="w-4 h-4" />
                         Add
@@ -883,7 +992,7 @@ function AddMemberModal({
           <div className="flex gap-4 mt-6">
             <button
               onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              className="flex-1 px-6 py-3 border-2 border-[#10B981]/30 text-white rounded-lg hover:bg-[#10B981]/10 transition-colors"
             >
               Cancel
             </button>
