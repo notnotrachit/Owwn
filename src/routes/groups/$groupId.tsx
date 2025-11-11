@@ -5,9 +5,11 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
 import { useState, useRef } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck, Settings } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck, Settings, ChevronsUpDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '~/components/ui/drawer'
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
 
 function GroupDetailSkeleton() {
   return (
@@ -635,9 +637,21 @@ function AddExpenseDrawer({
 }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
+  const [category, setCategory] = useState('')
+  const [categoryOpen, setCategoryOpen] = useState(false)
+  const [notes, setNotes] = useState('')
   const [paidBy, setPaidBy] = useState(currentUserId)
   const [splitBetween, setSplitBetween] = useState<string[]>([currentUserId])
   const createExpense = useMutation(api.expenses.createExpense)
+
+  const categories = [
+    { value: 'food', label: 'Food' },
+    { value: 'transport', label: 'Transport' },
+    { value: 'entertainment', label: 'Entertainment' },
+    { value: 'utilities', label: 'Utilities' },
+    { value: 'shopping', label: 'Shopping' },
+    { value: 'other', label: 'Other' },
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -652,10 +666,14 @@ function AddExpenseDrawer({
         currency: currencyCode,
         date: Date.now(),
         splitType: 'equal',
+        category: category || undefined,
+        notes: notes || undefined,
         splits: splitBetween.map(userId => ({ userId: userId as any, amount: 0 })),
       })
       setDescription('')
       setAmount('')
+      setCategory('')
+      setNotes('')
       setPaidBy(currentUserId)
       setSplitBetween([currentUserId])
       onClose()
@@ -699,20 +717,86 @@ function AddExpenseDrawer({
 
         <div>
           <label className="block text-sm font-medium text-white mb-2">
+            Category
+          </label>
+          <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
+              >
+                {category
+                  ? categories.find((cat) => cat.value === category)?.label
+                  : 'Select category...'}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0 bg-[#111827] border border-[#10B981]/30">
+              <Command className="bg-[#111827]">
+                <CommandInput placeholder="Search category..." className="text-white" />
+                <CommandList>
+                  <CommandEmpty className="text-white/60">No category found.</CommandEmpty>
+                  <CommandGroup>
+                    {categories.map((cat) => (
+                      <CommandItem
+                        key={cat.value}
+                        value={cat.value}
+                        onSelect={(currentValue) => {
+                          setCategory(currentValue === category ? '' : currentValue)
+                          setCategoryOpen(false)
+                        }}
+                        className="text-white hover:bg-[#10B981]/20 cursor-pointer"
+                      >
+                        <Check
+                          className={`mr-2 h-4 w-4 ${
+                            category === cat.value ? 'opacity-100' : 'opacity-0'
+                          }`}
+                        />
+                        {cat.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
+            Notes
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
+            placeholder="Add any additional details..."
+            rows={2}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">
             Paid by *
           </label>
-          <select
-            value={paidBy}
-            onChange={(e) => setPaidBy(e.target.value)}
-            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all text-sm"
-            required
-          >
-            {members.map((member: any) => (
-              <option key={member._id} value={member._id}>
-                {member.name || member.email}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={paidBy}
+              onChange={(e) => setPaidBy(e.target.value)}
+              className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all text-sm pr-10"
+              required
+            >
+              {members.map((member: any) => (
+                <option key={member._id} value={member._id} className="bg-[#111827] text-white">
+                  {member.name || member.email}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div>
