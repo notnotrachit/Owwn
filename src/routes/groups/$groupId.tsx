@@ -11,6 +11,7 @@ import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '~/components/
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
 import { Checkbox } from '~/components/ui/checkbox'
+import { RadioGroup, RadioGroupItem } from '~/components/ui/radio-group'
 
 function GroupDetailSkeleton() {
   return (
@@ -647,6 +648,8 @@ function AddExpenseDrawer({
   const [percentValues, setPercentValues] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string>('')
   const [splitDrawerOpen, setSplitDrawerOpen] = useState(false)
+  const [paidByDrawerOpen, setPaidByDrawerOpen] = useState(false)
+  const [paidByMultiple, setPaidByMultiple] = useState<Record<string, string>>({})
   const createExpense = useMutation(api.expenses.createExpense)
 
   const categories = [
@@ -661,7 +664,15 @@ function AddExpenseDrawer({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setFormError('')
-    if (!description || !amount || !paidBy || splitBetween.length === 0) {
+    
+    // Validate paid by
+    const hasMultiplePayers = Object.keys(paidByMultiple).length > 0
+    if (!hasMultiplePayers && !paidBy) {
+      setFormError('Please select who paid.')
+      return
+    }
+    
+    if (!description || !amount || splitBetween.length === 0) {
       setFormError('Please fill all required fields and select at least one member.')
       return
     }
@@ -671,6 +682,17 @@ function AddExpenseDrawer({
       if (!isFinite(totalCents) || totalCents <= 0) {
         setFormError('Enter a valid amount.')
         return
+      }
+      
+      // Validate multiple payers if applicable
+      if (hasMultiplePayers) {
+        const paidTotal = Object.values(paidByMultiple).reduce((sum, val) => {
+          return sum + Math.round(parseFloat(val || '0') * 100)
+        }, 0)
+        if (Math.abs(paidTotal - totalCents) > 1) {
+          setFormError('Paid amounts must add up to the total amount.')
+          return
+        }
       }
 
       let splits: { userId: any; amount: number }[] = []
@@ -721,15 +743,27 @@ function AddExpenseDrawer({
         }
       }
 
+      // For now, use the first payer or the single payer
+      // TODO: Backend needs to support multiple payers
+      const primaryPayer = hasMultiplePayers 
+        ? Object.keys(paidByMultiple)[0] as any
+        : paidBy as any
+
       await createExpense({
         groupId,
         description,
         amount: totalCents,
-        paidBy: paidBy as any,
+        paidBy: primaryPayer,
         currency: currencyCode,
         date: Date.now(),
         splitType,
         category: category || undefined,
+        notes: hasMultiplePayers 
+          ? `Paid by: ${Object.entries(paidByMultiple).map(([id, amt]) => {
+              const member = members.find((m: any) => m._id === id)
+              return `${member?.name || member?.email}: ${currencySymbol}${amt}`
+            }).join(', ')}`
+          : undefined,
         splits,
       })
       setDescription('')
@@ -740,6 +774,7 @@ function AddExpenseDrawer({
       setSplitType('equal')
       setExactValues({})
       setPercentValues({})
+      setPaidByMultiple({})
       onClose()
     } catch (error) {
       console.error('Failed to add expense:', error)
@@ -839,25 +874,18 @@ function AddExpenseDrawer({
           <label className="block text-sm font-medium text-white mb-2">
             Paid by *
           </label>
-          <div className="relative">
-            <select
-              value={paidBy}
-              onChange={(e) => setPaidBy(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white appearance-none cursor-pointer transition-all text-sm pr-10"
-              required
-            >
-              {members.map((member: any) => (
-                <option key={member._id} value={member._id} className="bg-[#111827] text-white">
-                  {member.name || member.email}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="w-4 h-4 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setPaidByDrawerOpen(true)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
+          >
+            <span>
+              {Object.keys(paidByMultiple).length > 0
+                ? `${Object.keys(paidByMultiple).length} people`
+                : members.find((m: any) => m._id === paidBy)?.name || members.find((m: any) => m._id === paidBy)?.email}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
         </div>
 
         {/* Split type field */}
@@ -1114,6 +1142,142 @@ function AddExpenseDrawer({
                     Done
                   </button>
                 </div>
+              )}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Paid By Configuration Drawer */}
+      <Drawer open={paidByDrawerOpen} onOpenChange={setPaidByDrawerOpen}>
+        <DrawerContent className="bg-[#0A0F12] border-t border-[#10B981]/30">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+            <h3 className="text-lg font-bold text-white mb-4">Who Paid?</h3>
+            
+            <div className="space-y-4">
+              {Object.keys(paidByMultiple).length === 0 ? (
+                <>
+                  {/* Single person selection */}
+                  <RadioGroup 
+                    value={String(paidBy)} 
+                    onValueChange={(value) => {
+                      setPaidBy(value)
+                      setPaidByDrawerOpen(false)
+                    }}
+                  >
+                    <div className="space-y-2">
+                      {members.map((member: any) => (
+                        <div
+                          key={member._id}
+                          className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-colors ${
+                            String(paidBy) === String(member._id)
+                              ? 'bg-[#10B981]/20 border-2 border-[#10B981]'
+                              : 'bg-[#111827] border-2 border-[#10B981]/30 hover:bg-[#10B981]/10'
+                          }`}
+                          onClick={() => {
+                            setPaidBy(member._id)
+                            setPaidByDrawerOpen(false)
+                          }}
+                        >
+                          <RadioGroupItem value={String(member._id)} id={`paidby-${member._id}`} />
+                          <label
+                            htmlFor={`paidby-${member._id}`}
+                            className="text-sm text-white/80 cursor-pointer flex-1"
+                          >
+                            {member.name || member.email}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </RadioGroup>
+
+                  {/* Button to switch to multiple payers */}
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Initialize with current payer
+                        setPaidByMultiple({ [paidBy]: amount })
+                      }}
+                      className="w-1/2 px-3 py-2 border border-[#10B981]/30 text-white/70 rounded-lg hover:bg-[#10B981]/10 transition-colors text-xs font-medium"
+                    >
+                      Paid by Multiple People
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Multiple payers mode */}
+                  <div className="text-sm font-medium text-white mb-2">Enter amounts paid:</div>
+                  {members.map((member: any) => (
+                    <div key={member._id} className="grid grid-cols-2 gap-3 items-center">
+                      <div className="text-sm text-white/80 truncate">{member.name || member.email}</div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={paidByMultiple[member._id] ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val === '' || val === '0') {
+                            const newPaid = { ...paidByMultiple }
+                            delete newPaid[member._id]
+                            setPaidByMultiple(newPaid)
+                          } else {
+                            setPaidByMultiple({ ...paidByMultiple, [member._id]: val })
+                          }
+                        }}
+                        className="w-full px-3 py-2 border-2 border-[#10B981]/30 rounded-lg bg-[#111827] text-white text-sm focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981]"
+                        placeholder={`0.00 ${currencySymbol}`}
+                      />
+                    </div>
+                  ))}
+                  
+                  {(() => {
+                    const totalAmount = parseFloat(amount) || 0
+                    const paidAmount = Object.values(paidByMultiple).reduce((sum, val) => {
+                      return sum + (parseFloat(val || '0'))
+                    }, 0)
+                    const remaining = totalAmount - paidAmount
+                    const isValid = Math.abs(remaining) < 0.01
+                    
+                    return (
+                      <div className={`text-sm p-3 rounded-lg border-2 ${
+                        isValid 
+                          ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' 
+                          : remaining > 0
+                            ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+                            : 'bg-red-500/10 border-red-500/30 text-red-500'
+                      }`}>
+                        {isValid ? (
+                          <span className="font-medium">✓ Total matches: {currencySymbol}{totalAmount.toFixed(2)}</span>
+                        ) : (
+                          <span className="font-medium">
+                            {remaining > 0 ? 'Remaining' : 'Over by'}: {currencySymbol}{Math.abs(remaining).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaidByMultiple({})
+                      }}
+                      className="flex-1 px-4 py-2.5 border-2 border-[#10B981]/30 text-white rounded-xl hover:bg-[#10B981]/10 transition-colors text-sm font-medium"
+                    >
+                      Back to Single
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaidByDrawerOpen(false)}
+                      className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm"
+                    >
+                      Done
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>
