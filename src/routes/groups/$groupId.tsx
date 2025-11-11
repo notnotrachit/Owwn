@@ -749,10 +749,35 @@ function AddExpenseDrawer({
   return (
     <div className="w-full max-w-md mx-auto px-4 py-6 pb-12 max-h-[75dvh] overflow-y-auto overscroll-contain">
       <h2 className="text-xl font-bold text-white mb-6">Add Expense</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Amount - Prominent centered display */}
+        <div className="flex flex-col items-center py-4">
+          <label className="text-sm font-medium text-white/50 mb-3">
+            Enter Amount
+          </label>
+          <div className="flex items-baseline justify-center gap-1">
+            <span className="text-3xl font-bold text-white/60">
+              {currencySymbol}
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="bg-transparent border-none outline-none text-4xl font-bold text-white placeholder-white/30 w-auto min-w-[100px] max-w-[200px] text-left focus:text-[#10B981] transition-colors"
+              placeholder="0"
+              required
+              autoFocus
+              style={{ width: `${Math.max(3, (amount || '0').toString().length)}ch` }}
+            />
+          </div>
+          <div className="h-1 w-24 mt-3 bg-[#10B981]/30 rounded-full" />
+        </div>
+
+        {/* Description - Optional, smaller */}
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            Description *
+          <label className="block text-sm font-medium text-white/60 mb-2">
+            Description
           </label>
           <input
             type="text"
@@ -760,21 +785,6 @@ function AddExpenseDrawer({
             onChange={(e) => setDescription(e.target.value)}
             className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
             placeholder="e.g., Dinner, Gas"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            Amount ({currencySymbol}) *
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
-            placeholder="0.00"
             required
           />
         </div>
