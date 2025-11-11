@@ -825,41 +825,45 @@ function AddExpenseDrawer({
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            Paid by *
-          </label>
-          <button
-            type="button"
-            onClick={() => setPaidByDrawerOpen(true)}
-            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
-          >
-            <span>
-              {isMultiplePayers
-                ? `${Object.keys(paidByMultiple).filter(k => paidByMultiple[k] && parseFloat(paidByMultiple[k]) > 0).length} people`
-                : members.find((m: any) => m._id === paidBy)?.name || members.find((m: any) => m._id === paidBy)?.email}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </button>
-        </div>
+        {/* Paid by and Split fields inline */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">
+              Paid by *
+            </label>
+            <button
+              type="button"
+              onClick={() => setPaidByDrawerOpen(true)}
+              disabled={!amount || parseFloat(amount) <= 0}
+              className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="truncate">
+                {isMultiplePayers
+                  ? `${Object.keys(paidByMultiple).filter(k => paidByMultiple[k] && parseFloat(paidByMultiple[k]) > 0).length} people`
+                  : members.find((m: any) => m._id === paidBy)?.name || members.find((m: any) => m._id === paidBy)?.email}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </button>
+          </div>
 
-        {/* Split type field */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            Split *
-          </label>
-          <button
-            type="button"
-            onClick={() => setSplitDrawerOpen(true)}
-            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
-          >
-            <span>
-              {splitType === 'equal' && 'Split Equally'}
-              {splitType === 'custom' && 'Split by Exact Values'}
-              {splitType === 'percentage' && 'Split by Percentage'}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </button>
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">
+              Split *
+            </label>
+            <button
+              type="button"
+              onClick={() => setSplitDrawerOpen(true)}
+              disabled={!amount || parseFloat(amount) <= 0}
+              className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="truncate">
+                {splitType === 'equal' && 'Split Equally'}
+                {splitType === 'custom' && 'Exact Values'}
+                {splitType === 'percentage' && 'Percentage'}
+              </span>
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </button>
+          </div>
         </div>
 
         {formError && (
@@ -876,7 +880,8 @@ function AddExpenseDrawer({
           </button>
           <button
             type="submit"
-            className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm"
+            disabled={!amount || parseFloat(amount) <= 0}
+            className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#10B981]"
           >
             <Plus className="w-4 h-4" />
             Add
