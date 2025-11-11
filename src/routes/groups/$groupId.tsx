@@ -1,15 +1,14 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link, Outlet, useMatches } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
-import { useState, useRef } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, LayoutGrid, CreditCard, UserCheck, Settings, ChevronsUpDown } from 'lucide-react'
+import { useState, useRef, Suspense } from 'react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, Settings, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal } from 'lucide-react'
+import { GroupBottomNav } from '~/components/GroupBottomNav'
 import { motion, AnimatePresence } from 'motion/react'
-import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '~/components/ui/drawer'
-import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
+import { Drawer, DrawerContent } from '~/components/ui/drawer'
 import { Checkbox } from '~/components/ui/checkbox'
 import { RadioGroup, RadioGroupItem } from '~/components/ui/radio-group'
 
@@ -48,12 +47,16 @@ function GroupDetail() {
   const { groupId } = Route.useParams()
   const { user, isLoading: isAuthLoading } = useAuth()
   const navigate = useNavigate()
+  const matches = useMatches()
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'expenses' | 'members' | 'balances' | 'activity' | 'settings'>('expenses')
   const [editingName, setEditingName] = useState('')
   const [editingDescription, setEditingDescription] = useState('')
 
+  // Check if we're on a child route (e.g., expense details)
+  const isOnChildRoute = matches.length > 2 // Root + Group + Child
+  
   const tabs = ['overview', 'expenses', 'members', 'settings'] as const
   const startXRef = useRef(0)
   const startYRef = useRef(0)
@@ -161,52 +164,71 @@ function GroupDetail() {
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
+      {/* Shared Header - Dynamic content based on route */}
       <header className="bg-[#101418]/80 backdrop-blur-md shadow-lg border-b border-[#10B981]/30 sticky top-0 z-40 pt-safe px-safe">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate({ to: '/' })}
+                onClick={() => {
+                  if (isOnChildRoute) {
+                    navigate({ to: '/groups/$groupId', params: { groupId } })
+                  } else {
+                    navigate({ to: '/' })
+                  }
+                }}
                 className="flex items-center gap-2 text-white/70 hover:text-white transition-colors"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="hidden sm:inline">Back</span>
               </button>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
-                  <Users className="w-5 h-5" />
+              {!isOnChildRoute && (
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
+                    <Users className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white">
+                      {group.name}
+                    </h1>
+                    {group.description && (
+                      <p className="text-sm text-white/70">
+                        {group.description}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-white">
-                    {group.name}
-                  </h1>
-                  {group.description && (
-                    <p className="text-sm text-white/70">
-                      {group.description}
-                    </p>
-                  )}
-                </div>
-              </div>
+              )}
+              {isOnChildRoute && (
+                <h1 className="text-xl font-bold text-white">Expense Details</h1>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 bg-[#10B981]/20 rounded-lg border border-[#10B981]/30">
-                <Users className="w-4 h-4 text-white/70" />
-                <span className="text-sm font-medium text-white">
-                  {group.members.length} {group.members.length === 1 ? 'member' : 'members'}
-                </span>
+            {!isOnChildRoute && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAddExpense(true)}
+                  className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 sm:px-6 rounded-xl transition-all shadow-lg"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="hidden sm:inline">Add Expense</span>
+                </button>
               </div>
-              <button
-                onClick={() => setShowAddExpense(true)}
-                className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 sm:px-6 rounded-xl transition-all shadow-lg"
-              >
-                <Plus className="w-5 h-5" />
-                <span className="hidden sm:inline">Add Expense</span>
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </header>
 
+      {/* Render child route (expense details) OR main group content */}
+      {isOnChildRoute ? (
+        <Suspense fallback={
+          <div className="min-h-[100dvh] bg-[#0A0F12] flex items-center justify-center">
+            <div className="text-white">Loading...</div>
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
+      ) : (
+        <>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
         {/* Tab Navigation - Improved with smooth animations */}
         <div className="hidden md:block bg-[#101418] rounded-2xl shadow-lg p-1.5 mb-6 border border-[#10B981]/30">
@@ -379,35 +401,47 @@ function GroupDetail() {
               </div>
             ) : (
               <div className="space-y-3">
-                {expenses.map((expense, index) => (
-                  <motion.div
-                    key={expense._id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
-                    whileHover={{ scale: 1.01, x: 4 }}
-                    className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="font-semibold text-lg text-white mb-1">
-                          {expense.description}
+                {expenses.map((expense: any, index: any) => {
+                  const hasMultiplePayers = expense.payments && expense.payments.length > 1
+                  const paidByText = hasMultiplePayers 
+                    ? `${expense.payments.length} people` 
+                    : expense.paidByName
+                  
+                  return (
+                    <Link
+                      key={expense._id}
+                      to="/groups/$groupId/expenses/$expenseId"
+                      params={{ groupId, expenseId: expense._id }}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05, duration: 0.3 }}
+                        whileHover={{ scale: 1.01, x: 4 }}
+                        className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors cursor-pointer"
+                      >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="font-semibold text-lg text-white mb-1">
+                            {expense.description}
+                          </div>
+                          <div className="text-sm text-white/70">
+                            Paid by <span className="font-medium">{paidByText}</span> •{' '}
+                            {new Date(expense.date).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-sm text-white/70">
-                          Paid by <span className="font-medium">{expense.paidByName}</span> •{' '}
-                          {new Date(expense.date).toLocaleDateString()}
+                        <div className="text-xl font-bold text-[#10B981]">
+                          {group.currencySymbol || '$'}{(expense.amount / 100).toFixed(2)}
                         </div>
                       </div>
-                      <div className="text-xl font-bold text-[#10B981]">
-                        {group.currencySymbol || '$'}{(expense.amount / 100).toFixed(2)}
+                      <div className="flex items-center gap-2 text-xs text-white/60">
+                        <Users className="w-3.5 h-3.5" />
+                        Split between {expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-white/60">
-                      <Users className="w-3.5 h-3.5" />
-                      Split between {expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -553,71 +587,22 @@ function GroupDetail() {
           <AddMemberModal
             groupId={groupId as any}
             currentUserId={user._id}
+            existingMembers={group.members}
             onClose={() => setShowAddMember(false)}
           />
         )}
       </AnimatePresence>
+        </>
+      )}
 
-      {/* Bottom Tab Bar - Mobile (5 tabs) */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-50 pb-safe px-safe">
-        <div className="max-w-7xl mx-auto px-2 pb-3">
-          <div className="bg-[#101418] border border-[#10B981]/30 rounded-2xl shadow-2xl p-1 flex items-center justify-between">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
-                activeTab === 'overview' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
-              }`}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <LayoutGrid className="w-4 h-4" />
-                <span className="text-[10px]">Overview</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('expenses')}
-              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
-                activeTab === 'expenses' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
-              }`}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <CreditCard className="w-4 h-4" />
-                <span className="text-[10px]">Expenses</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setShowAddExpense(true)}
-              className="flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors text-[#10B981] hover:bg-[#10B981]/20"
-            >
-              <div className="flex flex-col items-center gap-1">
-                <Plus className="w-5 h-5" />
-                <span className="text-[10px]">Add</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('members')}
-              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
-                activeTab === 'members' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
-              }`}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <UserCheck className="w-4 h-4" />
-                <span className="text-[10px]">Members</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors ${
-                activeTab === 'settings' ? 'bg-[#10B981] text-white shadow-lg' : 'text-white/80 hover:bg-[#10B981]/20'
-              }`}
-            >
-              <div className="flex flex-col items-center gap-1">
-                <Settings className="w-4 h-4" />
-                <span className="text-[10px]">Settings</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Bottom Tab Bar - Shared across all pages */}
+      <GroupBottomNav
+        groupId={groupId}
+        activeTab={activeTab}
+        isOnChildRoute={isOnChildRoute}
+        onTabChange={setActiveTab}
+        onAddExpense={() => setShowAddExpense(true)}
+      />
     </motion.div>
   )
 }
@@ -640,7 +625,6 @@ function AddExpenseDrawer({
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
-  const [categoryOpen, setCategoryOpen] = useState(false)
   const [paidBy, setPaidBy] = useState(currentUserId)
   const [splitBetween, setSplitBetween] = useState<string[]>(members.map((m: any) => m._id))
   const [splitType, setSplitType] = useState<'equal' | 'custom' | 'percentage'>('equal')
@@ -650,15 +634,16 @@ function AddExpenseDrawer({
   const [splitDrawerOpen, setSplitDrawerOpen] = useState(false)
   const [paidByDrawerOpen, setPaidByDrawerOpen] = useState(false)
   const [paidByMultiple, setPaidByMultiple] = useState<Record<string, string>>({})
+  const [isMultiplePayers, setIsMultiplePayers] = useState(false)
   const createExpense = useMutation(api.expenses.createExpense)
 
   const categories = [
-    { value: 'food', label: 'Food' },
-    { value: 'transport', label: 'Transport' },
-    { value: 'entertainment', label: 'Entertainment' },
-    { value: 'utilities', label: 'Utilities' },
-    { value: 'shopping', label: 'Shopping' },
-    { value: 'other', label: 'Other' },
+    { value: 'food', label: 'Food', icon: UtensilsCrossed },
+    { value: 'transport', label: 'Transport', icon: Car },
+    { value: 'entertainment', label: 'Entertainment', icon: Popcorn },
+    { value: 'utilities', label: 'Utilities', icon: Zap },
+    { value: 'shopping', label: 'Shopping', icon: ShoppingBag },
+    { value: 'other', label: 'Other', icon: MoreHorizontal },
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -717,37 +702,31 @@ function AddExpenseDrawer({
           return
         }
       } else {
-        // percentage
+        // percentage - send raw percentages to backend
         let pctSum = 0
-        const raw = splitBetween.map((id) => {
+        splits = splitBetween.map((id) => {
           const p = parseFloat(percentValues[id] || '0')
           pctSum += isFinite(p) ? p : 0
-          return { id, p: isFinite(p) ? p : 0 }
+          return { userId: id as any, amount: isFinite(p) ? p : 0 }
         })
         // Allow a small epsilon for 100%
         if (Math.abs(pctSum - 100) > 0.01) {
           setFormError('Percentages must add up to 100%.')
           return
         }
-        // compute amounts, distribute rounding remainder
-        let allocated = 0
-        splits = raw.map(({ id, p }) => {
-          const cents = Math.floor((p / 100) * totalCents)
-          allocated += cents
-          return { userId: id as any, amount: cents }
-        })
-        let remainder = totalCents - allocated
-        for (let i = 0; i < splits.length && remainder > 0; i++) {
-          splits[i].amount += 1
-          remainder--
-        }
       }
 
-      // For now, use the first payer or the single payer
-      // TODO: Backend needs to support multiple payers
+      // Prepare payment data
       const primaryPayer = hasMultiplePayers 
         ? Object.keys(paidByMultiple)[0] as any
         : paidBy as any
+
+      const paidByData = hasMultiplePayers
+        ? Object.entries(paidByMultiple).map(([userId, amt]) => ({
+            userId: userId as any,
+            amount: Math.round(parseFloat(amt) * 100)
+          }))
+        : undefined
 
       await createExpense({
         groupId,
@@ -758,13 +737,8 @@ function AddExpenseDrawer({
         date: Date.now(),
         splitType,
         category: category || undefined,
-        notes: hasMultiplePayers 
-          ? `Paid by: ${Object.entries(paidByMultiple).map(([id, amt]) => {
-              const member = members.find((m: any) => m._id === id)
-              return `${member?.name || member?.email}: ${currencySymbol}${amt}`
-            }).join(', ')}`
-          : undefined,
         splits,
+        paidByMultiple: paidByData,
       })
       setDescription('')
       setAmount('')
@@ -828,46 +802,27 @@ function AddExpenseDrawer({
           <label className="block text-sm font-medium text-white mb-2">
             Category
           </label>
-          <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-            <PopoverTrigger asChild>
-              <button
-                className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
-              >
-                {category
-                  ? categories.find((cat) => cat.value === category)?.label
-                  : 'Select category...'}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-full p-0 bg-[#111827] border border-[#10B981]/30">
-              <Command className="bg-[#111827]">
-                <CommandInput placeholder="Search category..." className="text-white" />
-                <CommandList>
-                  <CommandEmpty className="text-white/60">No category found.</CommandEmpty>
-                  <CommandGroup>
-                    {categories.map((cat) => (
-                      <CommandItem
-                        key={cat.value}
-                        value={cat.value}
-                        onSelect={(currentValue) => {
-                          setCategory(currentValue === category ? '' : currentValue)
-                          setCategoryOpen(false)
-                        }}
-                        className="text-white hover:bg-[#10B981]/20 cursor-pointer"
-                      >
-                        <Check
-                          className={`mr-2 h-4 w-4 ${
-                            category === cat.value ? 'opacity-100' : 'opacity-0'
-                          }`}
-                        />
-                        {cat.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {categories.map((cat) => {
+              const Icon = cat.icon
+              const isSelected = category === cat.value
+              return (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setCategory(isSelected ? '' : cat.value)}
+                  className={`flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border-2 transition-all min-w-[80px] ${
+                    isSelected
+                      ? 'bg-[#10B981] border-[#10B981] text-white'
+                      : 'bg-[#111827] border-[#10B981]/30 text-white/70 hover:bg-[#10B981]/10 hover:border-[#10B981]/50'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{cat.label}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <div>
@@ -880,8 +835,8 @@ function AddExpenseDrawer({
             className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
           >
             <span>
-              {Object.keys(paidByMultiple).length > 0
-                ? `${Object.keys(paidByMultiple).length} people`
+              {isMultiplePayers
+                ? `${Object.keys(paidByMultiple).filter(k => paidByMultiple[k] && parseFloat(paidByMultiple[k]) > 0).length} people`
                 : members.find((m: any) => m._id === paidBy)?.name || members.find((m: any) => m._id === paidBy)?.email}
             </span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1155,7 +1110,7 @@ function AddExpenseDrawer({
             <h3 className="text-lg font-bold text-white mb-4">Who Paid?</h3>
             
             <div className="space-y-4">
-              {Object.keys(paidByMultiple).length === 0 ? (
+              {!isMultiplePayers ? (
                 <>
                   {/* Single person selection */}
                   <RadioGroup 
@@ -1198,6 +1153,7 @@ function AddExpenseDrawer({
                       onClick={() => {
                         // Initialize with current payer
                         setPaidByMultiple({ [paidBy]: amount })
+                        setIsMultiplePayers(true)
                       }}
                       className="w-1/2 px-3 py-2 border border-[#10B981]/30 text-white/70 rounded-lg hover:bg-[#10B981]/10 transition-colors text-xs font-medium"
                     >
@@ -1208,7 +1164,19 @@ function AddExpenseDrawer({
               ) : (
                 <>
                   {/* Multiple payers mode */}
-                  <div className="text-sm font-medium text-white mb-2">Enter amounts paid:</div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium text-white">Enter amounts paid:</div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMultiplePayers(false)
+                        setPaidByMultiple({})
+                      }}
+                      className="text-xs text-white/70 hover:text-white underline"
+                    >
+                      Back to Single Person
+                    </button>
+                  </div>
                   {members.map((member: any) => (
                     <div key={member._id} className="grid grid-cols-2 gap-3 items-center">
                       <div className="text-sm text-white/80 truncate">{member.name || member.email}</div>
@@ -1218,7 +1186,8 @@ function AddExpenseDrawer({
                         value={paidByMultiple[member._id] ?? ''}
                         onChange={(e) => {
                           const val = e.target.value
-                          if (val === '' || val === '0') {
+                          // Always update the value, even if empty
+                          if (val === '') {
                             const newPaid = { ...paidByMultiple }
                             delete newPaid[member._id]
                             setPaidByMultiple(newPaid)
@@ -1576,10 +1545,12 @@ function AddExpenseModal({
 function AddMemberModal({
   groupId,
   currentUserId,
+  existingMembers,
   onClose,
 }: {
   groupId: any
   currentUserId: any
+  existingMembers: any[]
   onClose: () => void
 }) {
   const [email, setEmail] = useState('')
@@ -1589,20 +1560,40 @@ function AddMemberModal({
 
   const convex = useConvex()
   const addMember = useMutation(api.groups.addGroupMember)
+  
+  // Helper to check if user is already a member
+  const isUserMember = (userId: any) => {
+    return existingMembers.some((member: any) => member.userId === userId)
+  }
 
   const handleSearch = async () => {
     if (!email) return
     
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      setError('Please enter a complete, valid email address')
+      return
+    }
+    
     setIsSearching(true)
     setError('')
+    setSearchResults([])
     try {
+      // Search for exact email match
       const results = await convex.query(api.users.searchUsersByEmail, { emailQuery: email })
-      setSearchResults(results)
-      if (results.length === 0) {
-        setError('No users found with that email')
+      
+      // Filter to only exact matches
+      const exactMatches = results.filter((user: any) => 
+        user.email?.toLowerCase() === email.toLowerCase()
+      )
+      
+      setSearchResults(exactMatches)
+      if (exactMatches.length === 0) {
+        setError('No user found with that email address')
       }
     } catch (err: any) {
-      setError('Search failed')
+      setError('Search failed. Please try again.')
     } finally {
       setIsSearching(false)
     }
@@ -1618,7 +1609,21 @@ function AddMemberModal({
       })
       onClose()
     } catch (err: any) {
-      setError(err.message || 'Failed to add member')
+      // Extract user-friendly error message from Convex error
+      let errorMessage = 'Failed to add member'
+      
+      if (err?.message) {
+        // Extract the actual error message from Convex error format
+        // Format: "[CONVEX M(...)] [Request ID: ...] Server Error\nUncaught Error: ACTUAL_MESSAGE"
+        const match = err.message.match(/Uncaught Error: (.+?)(?:\n|$)/)
+        if (match && match[1]) {
+          errorMessage = match[1]
+        } else {
+          errorMessage = err.message
+        }
+      }
+      
+      setError(errorMessage)
     }
   }
 
@@ -1658,15 +1663,16 @@ function AddMemberModal({
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {error}
+            <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+              <X className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-1">
-                Search by email
+                Enter complete email address
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1678,7 +1684,7 @@ function AddMemberModal({
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   className="w-full pl-10 pr-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all"
-                  placeholder="Search by email address..."
+                  placeholder="e.g., user@example.com"
                 />
               </div>
               <button
@@ -1687,7 +1693,7 @@ function AddMemberModal({
                 className="w-full bg-[#10B981] hover:bg-[#059669] disabled:bg-[#10B981]/30 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mt-3"
               >
                 <Search className="w-5 h-5" />
-                {isSearching ? 'Searching...' : 'Search Users'}
+                {isSearching ? 'Searching...' : 'Find User'}
               </button>
             </div>
 
@@ -1718,13 +1724,20 @@ function AddMemberModal({
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleAddMember(user._id)}
-                        className="bg-[#10B981] hover:bg-[#059669] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                        Add
-                      </button>
+                      {isUserMember(user._id) ? (
+                        <div className="flex items-center gap-2 text-sm text-white/70 px-4 py-2 bg-white/5 rounded-lg">
+                          <Check className="w-4 h-4 text-[#10B981]" />
+                          Already a member
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleAddMember(user._id)}
+                          className="bg-[#10B981] hover:bg-[#059669] text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                          Add
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

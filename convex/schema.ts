@@ -63,6 +63,16 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_expense_and_user", ["expenseId", "userId"]),
 
+  // Expense payments (who paid what for each expense)
+  expensePayments: defineTable({
+    expenseId: v.id("expenses"),
+    userId: v.id("users"),
+    amount: v.number(), // Amount this user paid in cents
+  })
+    .index("by_expense", ["expenseId"])
+    .index("by_user", ["userId"])
+    .index("by_expense_and_user", ["expenseId", "userId"]),
+
   // Settlements (when someone pays back their debt)
   settlements: defineTable({
     groupId: v.id("groups"),

@@ -25,10 +25,16 @@ export const createExpense = mutation({
         amount: v.number(), // For custom splits, or percentage (0-100)
       })
     ),
+    paidByMultiple: v.optional(v.array(
+      v.object({
+        userId: v.id("users"),
+        amount: v.number(), // Amount this user paid in cents
+      })
+    )),
   },
   returns: v.id("expenses"),
   handler: async (ctx, args) => {
-    const { splitType, splits, ...expenseData } = args;
+    const { splitType, splits, paidByMultiple, ...expenseData } = args;
 
     // Verify all split users are members of the group
     for (const split of splits) {
@@ -44,8 +50,49 @@ export const createExpense = mutation({
       }
     }
 
+    // Validate multiple payers if provided
+    if (paidByMultiple && paidByMultiple.length > 0) {
+      const totalPaid = paidByMultiple.reduce((sum, p) => sum + p.amount, 0);
+      if (totalPaid !== args.amount) {
+        throw new Error("Total paid amounts must equal expense amount");
+      }
+      
+      // Verify all payers are members of the group
+      for (const payer of paidByMultiple) {
+        const membership = await ctx.db
+          .query("groupMembers")
+          .withIndex("by_group_and_user", (q) =>
+            q.eq("groupId", args.groupId).eq("userId", payer.userId)
+          )
+          .first();
+
+        if (!membership) {
+          throw new Error("All payers must be members of the group");
+        }
+      }
+    }
+
     // Create the expense
     const expenseId = await ctx.db.insert("expenses", expenseData);
+
+    // Create payment records
+    if (paidByMultiple && paidByMultiple.length > 0) {
+      // Multiple payers
+      for (const payer of paidByMultiple) {
+        await ctx.db.insert("expensePayments", {
+          expenseId,
+          userId: payer.userId,
+          amount: payer.amount,
+        });
+      }
+    } else {
+      // Single payer
+      await ctx.db.insert("expensePayments", {
+        expenseId,
+        userId: args.paidBy,
+        amount: args.amount,
+      });
+    }
 
     // Calculate split amounts based on type
     let splitAmounts: { userId: Id<"users">; amount: number }[] = [];
@@ -115,6 +162,13 @@ export const getGroupExpenses = query({
       date: v.number(),
       imageUrl: v.optional(v.string()),
       notes: v.optional(v.string()),
+      payments: v.array(
+        v.object({
+          userId: v.id("users"),
+          userName: v.string(),
+          amount: v.number(),
+        })
+      ),
       splits: v.array(
         v.object({
           userId: v.id("users"),
@@ -135,6 +189,23 @@ export const getGroupExpenses = query({
     const expensesWithDetails = await Promise.all(
       expenses.map(async (expense) => {
         const payer = await ctx.db.get(expense.paidBy);
+        
+        const payments = await ctx.db
+          .query("expensePayments")
+          .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
+          .collect();
+
+        const paymentsWithNames = await Promise.all(
+          payments.map(async (payment) => {
+            const user = await ctx.db.get(payment.userId);
+            return {
+              userId: payment.userId,
+              userName: user?.name ?? "Unknown",
+              amount: payment.amount,
+            };
+          })
+        );
+
         const splits = await ctx.db
           .query("expenseSplits")
           .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
@@ -155,6 +226,7 @@ export const getGroupExpenses = query({
         return {
           ...expense,
           paidByName: payer?.name ?? "Unknown",
+          payments: paymentsWithNames,
           splits: splitsWithNames,
         };
       })
@@ -181,6 +253,13 @@ export const getExpenseDetails = query({
       date: v.number(),
       imageUrl: v.optional(v.string()),
       notes: v.optional(v.string()),
+      payments: v.array(
+        v.object({
+          userId: v.id("users"),
+          userName: v.string(),
+          amount: v.number(),
+        })
+      ),
       splits: v.array(
         v.object({
           userId: v.id("users"),
@@ -198,6 +277,23 @@ export const getExpenseDetails = query({
     if (!expense) return null;
 
     const payer = await ctx.db.get(expense.paidBy);
+    
+    const payments = await ctx.db
+      .query("expensePayments")
+      .withIndex("by_expense", (q) => q.eq("expenseId", args.expenseId))
+      .collect();
+
+    const paymentsWithNames = await Promise.all(
+      payments.map(async (payment) => {
+        const user = await ctx.db.get(payment.userId);
+        return {
+          userId: payment.userId,
+          userName: user?.name ?? "Unknown",
+          amount: payment.amount,
+        };
+      })
+    );
+
     const splits = await ctx.db
       .query("expenseSplits")
       .withIndex("by_expense", (q) => q.eq("expenseId", args.expenseId))
@@ -219,6 +315,7 @@ export const getExpenseDetails = query({
     return {
       ...expense,
       paidByName: payer?.name ?? "Unknown",
+      payments: paymentsWithNames,
       splits: splitsWithDetails,
     };
   },
@@ -313,11 +410,19 @@ export const getGroupBalances = query({
         .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
         .collect();
 
-      // Payer gets credited
-      balanceMap.set(
-        expense.paidBy,
-        (balanceMap.get(expense.paidBy) || 0) + expense.amount
-      );
+      // Get payment records (supports multiple payers)
+      const payments = await ctx.db
+        .query("expensePayments")
+        .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
+        .collect();
+
+      // Each payer gets credited for what they paid
+      for (const payment of payments) {
+        balanceMap.set(
+          payment.userId,
+          (balanceMap.get(payment.userId) || 0) + payment.amount
+        );
+      }
 
       // Each split participant gets debited
       for (const split of splits) {
