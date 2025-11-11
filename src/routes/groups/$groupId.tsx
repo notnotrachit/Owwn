@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Drawer, DrawerContent, DrawerTrigger, DrawerClose } from '~/components/ui/drawer'
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '~/components/ui/command'
+import { Checkbox } from '~/components/ui/checkbox'
 
 function GroupDetailSkeleton() {
   return (
@@ -639,9 +640,13 @@ function AddExpenseDrawer({
   const [amount, setAmount] = useState('')
   const [category, setCategory] = useState('')
   const [categoryOpen, setCategoryOpen] = useState(false)
-  const [notes, setNotes] = useState('')
   const [paidBy, setPaidBy] = useState(currentUserId)
-  const [splitBetween, setSplitBetween] = useState<string[]>([currentUserId])
+  const [splitBetween, setSplitBetween] = useState<string[]>(members.map((m: any) => m._id))
+  const [splitType, setSplitType] = useState<'equal' | 'custom' | 'percentage'>('equal')
+  const [exactValues, setExactValues] = useState<Record<string, string>>({})
+  const [percentValues, setPercentValues] = useState<Record<string, string>>({})
+  const [formError, setFormError] = useState<string>('')
+  const [splitDrawerOpen, setSplitDrawerOpen] = useState(false)
   const createExpense = useMutation(api.expenses.createExpense)
 
   const categories = [
@@ -655,27 +660,86 @@ function AddExpenseDrawer({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!description || !amount || !paidBy || splitBetween.length === 0) return
+    setFormError('')
+    if (!description || !amount || !paidBy || splitBetween.length === 0) {
+      setFormError('Please fill all required fields and select at least one member.')
+      return
+    }
 
     try {
+      const totalCents = Math.round(parseFloat(amount) * 100)
+      if (!isFinite(totalCents) || totalCents <= 0) {
+        setFormError('Enter a valid amount.')
+        return
+      }
+
+      let splits: { userId: any; amount: number }[] = []
+      if (splitType === 'equal') {
+        const n = splitBetween.length
+        const base = Math.floor(totalCents / n)
+        let remainder = totalCents - base * n
+        splits = splitBetween.map((id) => {
+          const extra = remainder > 0 ? 1 : 0
+          if (remainder > 0) remainder -= 1
+          return { userId: id as any, amount: base + extra }
+        })
+      } else if (splitType === 'custom') {
+        let sum = 0
+        splits = splitBetween.map((id) => {
+          const v = Math.round(parseFloat(exactValues[id] || '0') * 100)
+          sum += v
+          return { userId: id as any, amount: v }
+        })
+        if (sum !== totalCents) {
+          setFormError('Exact amounts must add up to the total amount.')
+          return
+        }
+      } else {
+        // percentage
+        let pctSum = 0
+        const raw = splitBetween.map((id) => {
+          const p = parseFloat(percentValues[id] || '0')
+          pctSum += isFinite(p) ? p : 0
+          return { id, p: isFinite(p) ? p : 0 }
+        })
+        // Allow a small epsilon for 100%
+        if (Math.abs(pctSum - 100) > 0.01) {
+          setFormError('Percentages must add up to 100%.')
+          return
+        }
+        // compute amounts, distribute rounding remainder
+        let allocated = 0
+        splits = raw.map(({ id, p }) => {
+          const cents = Math.floor((p / 100) * totalCents)
+          allocated += cents
+          return { userId: id as any, amount: cents }
+        })
+        let remainder = totalCents - allocated
+        for (let i = 0; i < splits.length && remainder > 0; i++) {
+          splits[i].amount += 1
+          remainder--
+        }
+      }
+
       await createExpense({
         groupId,
         description,
-        amount: Math.round(parseFloat(amount) * 100),
+        amount: totalCents,
         paidBy: paidBy as any,
         currency: currencyCode,
         date: Date.now(),
-        splitType: 'equal',
+        splitType,
         category: category || undefined,
-        notes: notes || undefined,
-        splits: splitBetween.map(userId => ({ userId: userId as any, amount: 0 })),
+        splits,
       })
       setDescription('')
       setAmount('')
       setCategory('')
-      setNotes('')
       setPaidBy(currentUserId)
-      setSplitBetween([currentUserId])
+      setSplitBetween(members.map((m: any) => m._id))
+      setSplitType('equal')
+      setExactValues({})
+      setPercentValues({})
       onClose()
     } catch (error) {
       console.error('Failed to add expense:', error)
@@ -683,7 +747,7 @@ function AddExpenseDrawer({
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+    <div className="w-full max-w-md mx-auto px-4 py-6 pb-12 max-h-[75dvh] overflow-y-auto overscroll-contain">
       <h2 className="text-xl font-bold text-white mb-6">Add Expense</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -763,19 +827,6 @@ function AddExpenseDrawer({
 
         <div>
           <label className="block text-sm font-medium text-white mb-2">
-            Notes
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-sm"
-            placeholder="Add any additional details..."
-            rows={2}
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">
             Paid by *
           </label>
           <div className="relative">
@@ -799,30 +850,28 @@ function AddExpenseDrawer({
           </div>
         </div>
 
+        {/* Split type field */}
         <div>
           <label className="block text-sm font-medium text-white mb-2">
-            Split between *
+            Split *
           </label>
-          <div className="space-y-2 max-h-32 overflow-y-auto">
-            {members.map((member: any) => (
-              <label key={member._id} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={splitBetween.includes(member._id)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSplitBetween([...splitBetween, member._id])
-                    } else {
-                      setSplitBetween(splitBetween.filter(id => id !== member._id))
-                    }
-                  }}
-                  className="w-4 h-4 rounded border-2 border-[#10B981]/30 bg-[#111827] cursor-pointer"
-                />
-                <span className="text-sm text-white/80">{member.name || member.email}</span>
-              </label>
-            ))}
-          </div>
+          <button
+            type="button"
+            onClick={() => setSplitDrawerOpen(true)}
+            className="w-full px-4 py-2.5 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white transition-all text-sm flex items-center justify-between"
+          >
+            <span>
+              {splitType === 'equal' && 'Split Equally'}
+              {splitType === 'custom' && 'Split by Exact Values'}
+              {splitType === 'percentage' && 'Split by Percentage'}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </button>
         </div>
+
+        {formError && (
+          <div className="text-red-400 text-sm">{formError}</div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button
@@ -841,6 +890,166 @@ function AddExpenseDrawer({
           </button>
         </div>
       </form>
+
+      {/* Nested Split Configuration Drawer */}
+      <Drawer open={splitDrawerOpen} onOpenChange={setSplitDrawerOpen}>
+        <DrawerContent className="bg-[#0A0F12] border-t border-[#10B981]/30">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+            <h3 className="text-lg font-bold text-white mb-4">Configure Split</h3>
+            
+            <div className="space-y-4">
+              {/* Split type selector */}
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSplitType('equal')}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-colors text-left ${
+                    splitType === 'equal'
+                      ? 'bg-[#10B981] text-white border-[#10B981]'
+                      : 'bg-[#111827] text-white/80 border-[#10B981]/30 hover:bg-[#10B981]/10'
+                  }`}
+                >
+                  <div className="font-semibold">Split Equally</div>
+                  <div className="text-xs opacity-70 mt-1">Divide amount equally among selected members</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSplitType('custom')}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-colors text-left ${
+                    splitType === 'custom'
+                      ? 'bg-[#10B981] text-white border-[#10B981]'
+                      : 'bg-[#111827] text-white/80 border-[#10B981]/30 hover:bg-[#10B981]/10'
+                  }`}
+                >
+                  <div className="font-semibold">Split by Exact Values</div>
+                  <div className="text-xs opacity-70 mt-1">Enter exact amount for each member</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSplitType('percentage')}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium border-2 transition-colors text-left ${
+                    splitType === 'percentage'
+                      ? 'bg-[#10B981] text-white border-[#10B981]'
+                      : 'bg-[#111827] text-white/80 border-[#10B981]/30 hover:bg-[#10B981]/10'
+                  }`}
+                >
+                  <div className="font-semibold">Split by Percentage</div>
+                  <div className="text-xs opacity-70 mt-1">Enter percentage for each member</div>
+                </button>
+              </div>
+
+              {/* Show member selection for equal split */}
+              {splitType === 'equal' && (
+                <div className="mt-4 space-y-2 border-t border-[#10B981]/30 pt-4">
+                  <div className="text-sm font-medium text-white mb-2">Split between:</div>
+                  {members.map((member: any) => {
+                    const totalAmount = parseFloat(amount) || 0
+                    const perPersonAmount = splitBetween.length > 0 ? totalAmount / splitBetween.length : 0
+                    const isSelected = splitBetween.includes(member._id)
+                    
+                    return (
+                      <div key={member._id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-[#10B981]/10 transition-colors">
+                        <Checkbox
+                          id={`equal-${member._id}`}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSplitBetween([...splitBetween, member._id])
+                            } else {
+                              setSplitBetween(splitBetween.filter(id => id !== member._id))
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`equal-${member._id}`}
+                          className="text-sm text-white/80 cursor-pointer flex-1"
+                        >
+                          {member.name || member.email}
+                        </label>
+                        {isSelected && totalAmount > 0 && (
+                          <span className="text-sm font-medium text-[#10B981]">
+                            {currencySymbol}{perPersonAmount.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setSplitDrawerOpen(false)}
+                    className="w-full mt-4 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+
+              {/* Show input fields for custom/percentage */}
+              {splitType === 'custom' && (
+                <div className="mt-4 space-y-2 border-t border-[#10B981]/30 pt-4">
+                  <div className="text-sm font-medium text-white mb-2">Enter amounts:</div>
+                  {splitBetween.map((id) => {
+                    const m = members.find((mm: any) => mm._id === id)
+                    return (
+                      <div key={id} className="grid grid-cols-2 gap-3 items-center">
+                        <div className="text-sm text-white/80 truncate">{m?.name || m?.email}</div>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={exactValues[id] ?? ''}
+                          onChange={(e) => setExactValues({ ...exactValues, [id]: e.target.value })}
+                          className="w-full px-3 py-2 border-2 border-[#10B981]/30 rounded-lg bg-[#111827] text-white text-sm focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981]"
+                          placeholder={`0.00 ${currencySymbol}`}
+                        />
+                      </div>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => setSplitDrawerOpen(false)}
+                    className="w-full mt-4 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+              
+              {splitType === 'percentage' && (
+                <div className="mt-4 space-y-2 border-t border-[#10B981]/30 pt-4">
+                  <div className="text-sm font-medium text-white mb-2">Enter percentages:</div>
+                  {splitBetween.map((id) => {
+                    const m = members.find((mm: any) => mm._id === id)
+                    return (
+                      <div key={id} className="grid grid-cols-2 gap-3 items-center">
+                        <div className="text-sm text-white/80 truncate">{m?.name || m?.email}</div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={percentValues[id] ?? ''}
+                            onChange={(e) => setPercentValues({ ...percentValues, [id]: e.target.value })}
+                            className="w-full px-3 py-2 border-2 border-[#10B981]/30 rounded-lg bg-[#111827] text-white text-sm focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981]"
+                            placeholder="0"
+                          />
+                          <span className="text-white/70 text-sm">%</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div className="text-xs text-white/60 mt-2">Percentages must sum to 100%.</div>
+                  <button
+                    type="button"
+                    onClick={() => setSplitDrawerOpen(false)}
+                    className="w-full mt-4 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 }
