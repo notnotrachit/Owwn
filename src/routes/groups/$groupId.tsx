@@ -1004,6 +1004,32 @@ function AddExpenseDrawer({
                       </div>
                     )
                   })}
+                  {(() => {
+                    const totalAmount = parseFloat(amount) || 0
+                    const allocatedAmount = splitBetween.reduce((sum, id) => {
+                      return sum + (parseFloat(exactValues[id] || '0'))
+                    }, 0)
+                    const remaining = totalAmount - allocatedAmount
+                    const isValid = Math.abs(remaining) < 0.01
+                    
+                    return (
+                      <div className={`text-sm p-3 rounded-lg border-2 ${
+                        isValid 
+                          ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' 
+                          : remaining > 0
+                            ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+                            : 'bg-red-500/10 border-red-500/30 text-red-500'
+                      }`}>
+                        {isValid ? (
+                          <span className="font-medium">✓ Total matches: {currencySymbol}{totalAmount.toFixed(2)}</span>
+                        ) : (
+                          <span className="font-medium">
+                            {remaining > 0 ? 'Remaining' : 'Over by'}: {currencySymbol}{Math.abs(remaining).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <button
                     type="button"
                     onClick={() => setSplitDrawerOpen(false)}
@@ -1019,6 +1045,10 @@ function AddExpenseDrawer({
                   <div className="text-sm font-medium text-white mb-2">Enter percentages:</div>
                   {splitBetween.map((id) => {
                     const m = members.find((mm: any) => mm._id === id)
+                    const pct = parseFloat(percentValues[id] || '0')
+                    const totalAmount = parseFloat(amount) || 0
+                    const memberAmount = (pct / 100) * totalAmount
+                    
                     return (
                       <div key={id} className="grid grid-cols-2 gap-3 items-center">
                         <div className="text-sm text-white/80 truncate">{m?.name || m?.email}</div>
@@ -1032,11 +1062,40 @@ function AddExpenseDrawer({
                             placeholder="0"
                           />
                           <span className="text-white/70 text-sm">%</span>
+                          {pct > 0 && totalAmount > 0 && (
+                            <span className="text-xs text-[#10B981] whitespace-nowrap">
+                              {currencySymbol}{memberAmount.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )
                   })}
-                  <div className="text-xs text-white/60 mt-2">Percentages must sum to 100%.</div>
+                  {(() => {
+                    const totalPercent = splitBetween.reduce((sum, id) => {
+                      return sum + (parseFloat(percentValues[id] || '0'))
+                    }, 0)
+                    const remaining = 100 - totalPercent
+                    const isValid = Math.abs(remaining) < 0.01
+                    
+                    return (
+                      <div className={`text-sm p-3 rounded-lg border-2 ${
+                        isValid 
+                          ? 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]' 
+                          : remaining > 0
+                            ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500'
+                            : 'bg-red-500/10 border-red-500/30 text-red-500'
+                      }`}>
+                        {isValid ? (
+                          <span className="font-medium">✓ Total: 100%</span>
+                        ) : (
+                          <span className="font-medium">
+                            {remaining > 0 ? 'Remaining' : 'Over by'}: {Math.abs(remaining).toFixed(2)}%
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                   <button
                     type="button"
                     onClick={() => setSplitDrawerOpen(false)}
