@@ -4,7 +4,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
-import { useState, useRef, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet} from 'lucide-react'
 import { GroupBottomNav } from '~/components/GroupBottomNav'
 import { motion, AnimatePresence } from 'motion/react'
@@ -58,42 +58,6 @@ function GroupDetail() {
 
   // Check if we're on a child route (e.g., expense details)
   const isOnChildRoute = matches.length > 2 // Root + Group + Child
-  
-  const tabs = ['overview', 'expenses', 'members', 'settings'] as const
-  const startXRef = useRef(0)
-  const startYRef = useRef(0)
-  const trackingRef = useRef(false)
-  const swipedRef = useRef(false)
-
-  const goNextTab = () => {
-    const i = tabs.indexOf(activeTab)
-    if (i < tabs.length - 1) setActiveTab(tabs[i + 1])
-  }
-  const goPrevTab = () => {
-    const i = tabs.indexOf(activeTab)
-    if (i > 0) setActiveTab(tabs[i - 1])
-  }
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0]
-    startXRef.current = t.clientX
-    startYRef.current = t.clientY
-    trackingRef.current = true
-    swipedRef.current = false
-  }
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!trackingRef.current || swipedRef.current) return
-    const t = e.touches[0]
-    const dx = t.clientX - startXRef.current
-    const dy = t.clientY - startYRef.current
-    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return
-    if (dx < 0) goNextTab()
-    else goPrevTab()
-    swipedRef.current = true
-  }
-  const handleTouchEnd = () => {
-    trackingRef.current = false
-  }
 
   const { data: group } = useSuspenseQuery(
     convexQuery(api.groups.getGroupDetails, { groupId: groupId as any })
@@ -235,7 +199,7 @@ function GroupDetail() {
         </Suspense>
       ) : (
         <>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-28 md:pb-8">
         {/* Tab Navigation - Improved with smooth animations */}
         <div className="hidden md:block bg-[#101418] rounded-2xl shadow-lg p-1.5 mb-6 border border-[#10B981]/30">
           <div className="grid grid-cols-3 gap-2 relative">
@@ -453,7 +417,7 @@ function GroupDetail() {
                           <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.05, duration: 0.3 }}
+                            transition={{ delay: Math.min(index * 0.05, 0.5), duration: 0.3 }}
                             whileHover={{ scale: 1.01, x: 4 }}
                             className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors cursor-pointer"
                           >
@@ -838,7 +802,7 @@ function AddExpenseDrawer({
           <label className="block text-sm font-medium text-white mb-2">
             Category
           </label>
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {categories.map((cat) => {
               const Icon = cat.icon
               const isSelected = category === cat.value
@@ -1064,13 +1028,29 @@ function AddExpenseDrawer({
                       </div>
                     )
                   })()}
-                  <button
-                    type="button"
-                    onClick={() => setSplitDrawerOpen(false)}
-                    className="w-full mt-4 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
-                  >
-                    Done
-                  </button>
+                  {(() => {
+                    const totalAmount = parseFloat(amount) || 0
+                    const allocatedAmount = splitBetween.reduce((sum, id) => {
+                      return sum + (parseFloat(exactValues[id] || '0'))
+                    }, 0)
+                    const remaining = totalAmount - allocatedAmount
+                    const isValid = Math.abs(remaining) < 0.01
+                    
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setSplitDrawerOpen(false)}
+                        disabled={!isValid}
+                        className={`w-full mt-4 font-semibold py-2.5 px-4 rounded-xl transition-colors ${
+                          isValid
+                            ? 'bg-[#10B981] hover:bg-[#059669] text-white cursor-pointer'
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        Done
+                      </button>
+                    )
+                  })()}
                 </div>
               )}
               
@@ -1130,13 +1110,28 @@ function AddExpenseDrawer({
                       </div>
                     )
                   })()}
-                  <button
-                    type="button"
-                    onClick={() => setSplitDrawerOpen(false)}
-                    className="w-full mt-4 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
-                  >
-                    Done
-                  </button>
+                  {(() => {
+                    const totalPercent = splitBetween.reduce((sum, id) => {
+                      return sum + (parseFloat(percentValues[id] || '0'))
+                    }, 0)
+                    const remaining = 100 - totalPercent
+                    const isValid = Math.abs(remaining) < 0.01
+                    
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setSplitDrawerOpen(false)}
+                        disabled={!isValid}
+                        className={`w-full mt-4 font-semibold py-2.5 px-4 rounded-xl transition-colors ${
+                          isValid
+                            ? 'bg-[#10B981] hover:bg-[#059669] text-white cursor-pointer'
+                            : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        Done
+                      </button>
+                    )
+                  })()}
                 </div>
               )}
             </div>
