@@ -18,6 +18,7 @@
 - [ ] Expense templates for common purchases
 - [ ] Budget limits per category
 - [ ] Debt simplification visualization
+- [ ] Transaction edit and edit history
 
 ## Maybe in Future
 - [ ] Mobile App that can read from transaction sms (UPI, Venmo, PayPal)

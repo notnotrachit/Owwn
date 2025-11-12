@@ -57,28 +57,41 @@ export function GroupBottomNav({
             const isActive = getActiveTab() === tab.id
             const Icon = tab.icon
             
+            // Special styling for Add button
+            if (tab.id === 'add') {
+              return (
+                <motion.button
+                  key={tab.id}
+                  onClick={handleAddClick}
+                  className="relative"
+                  whileTap={{ scale: 0.85, rotate: 90 }}
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                >
+                  <motion.div
+                    className="absolute -top-6 left-1/2 -translate-x-1/2 w-14 h-14 bg-gradient-to-br from-[#10B981] to-[#059669] rounded-full shadow-lg shadow-[#10B981]/50 flex items-center justify-center"
+                    whileHover={{ y: -2, boxShadow: "0 10px 40px rgba(16, 185, 129, 0.6)" }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    <Plus className="w-7 h-7 text-white" strokeWidth={2.5} />
+                  </motion.div>
+                  <div className="w-14 h-8" /> {/* Spacer */}
+                </motion.button>
+              )
+            }
+            
             return (
               <motion.button
                 key={tab.id}
-                onClick={() => {
-                  if (tab.id === 'add') {
-                    handleAddClick()
-                  } else {
-                    handleTabClick(tab.id as any)
-                  }
-                }}
+                onClick={() => handleTabClick(tab.id as any)}
                 className={`flex-1 py-2.5 mx-0.5 rounded-xl text-center transition-colors relative z-10 ${
-                  isActive && tab.id !== 'add'
-                    ? 'text-white'
-                    : tab.id === 'add'
-                    ? 'text-[#10B981]'
-                    : 'text-white/80'
+                  isActive ? 'text-white' : 'text-white/80'
                 }`}
-                whileTap={{ scale: tab.id === 'add' ? 0.9 : 0.95 }}
-                whileHover={{ scale: tab.id === 'add' ? 1.1 : 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05 }}
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                {isActive && tab.id !== 'add' && (
+                {isActive && (
                   <motion.div
                     layoutId="activeTab"
                     className="absolute inset-0 bg-[#10B981] rounded-xl shadow-lg"
@@ -87,11 +100,10 @@ export function GroupBottomNav({
                 )}
                 <motion.div 
                   className="flex flex-col items-center gap-1 relative z-10"
-                  animate={isActive && tab.id !== 'add' ? { y: -2 } : { y: 0 }}
-                  whileHover={tab.id === 'add' ? { y: -3 } : {}}
+                  animate={isActive ? { y: -2 } : { y: 0 }}
                   transition={{ type: "spring", stiffness: 300, damping: 20 }}
                 >
-                  <Icon className={tab.id === 'add' ? 'w-5 h-5' : 'w-4 h-4'} />
+                  <Icon className="w-4 h-4" />
                   <span className="text-[10px]">{tab.label}</span>
                 </motion.div>
               </motion.button>
