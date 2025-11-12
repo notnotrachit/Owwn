@@ -5,7 +5,7 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
 import { useState, useRef, Suspense } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, Settings, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet} from 'lucide-react'
 import { GroupBottomNav } from '~/components/GroupBottomNav'
 import { motion, AnimatePresence } from 'motion/react'
 import { Drawer, DrawerContent } from '~/components/ui/drawer'
@@ -50,6 +50,8 @@ function GroupDetail() {
   const matches = useMatches()
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
+  const [showSettlement, setShowSettlement] = useState(false)
+  const [settlementMember, setSettlementMember] = useState<any>(null)
   const [activeTab, setActiveTab] = useState<'expenses' | 'members' | 'balances' | 'activity' | 'settings'>('expenses')
   const [editingName, setEditingName] = useState('')
   const [editingDescription, setEditingDescription] = useState('')
@@ -99,6 +101,10 @@ function GroupDetail() {
 
   const { data: expenses } = useSuspenseQuery(
     convexQuery(api.expenses.getGroupExpenses, { groupId: groupId as any })
+  )
+
+  const { data: settlements } = useSuspenseQuery(
+    convexQuery(api.settlements.getGroupSettlements, { groupId: groupId as any })
   )
 
   const { data: balances } = useSuspenseQuery(
@@ -297,7 +303,7 @@ function GroupDetail() {
             <div className="bg-[#101418] rounded-2xl shadow-xl p-8 mb-8 border border-[#10B981]/30">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-lg bg-[#10B981] text-white flex items-center justify-center shadow-md">
-              <DollarSign className="w-5 h-5" />
+              <Wallet className="w-5 h-5" />
             </div>
             <h2 className="text-2xl font-bold text-white">
               Your Balance
@@ -353,37 +359,61 @@ function GroupDetail() {
               Suggested Settlements
             </h2>
             <div className="space-y-3">
-              {balances.settlements.map((settlement, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-4 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-white font-medium">
-                      {settlement.fromName}
-                    </span>
-                    <span className="text-white/50">→</span>
-                    <span className="text-white font-medium">
-                      {settlement.toName}
-                    </span>
+              {balances.settlements.map((settlement, idx) => {
+                // Check if current user is the one who needs to pay
+                const isUserPaying = settlement.from === user._id
+                const toMember = group.members.find((m: any) => m._id === settlement.to)
+                
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <span className="text-white font-medium">
+                          {settlement.fromName}
+                        </span>
+                        <span className="text-white/50">→</span>
+                        <span className="text-white font-medium">
+                          {settlement.toName}
+                        </span>
+                      </div>
+                      <div className="text-lg font-semibold text-[#10B981]">
+                        {group.currencySymbol || '$'}{(settlement.amount / 100).toFixed(2)}
+                      </div>
+                    </div>
+                    {isUserPaying && (
+                      <button
+                        onClick={() => {
+                          setSettlementMember({ 
+                            member: toMember, 
+                            amount: settlement.amount,
+                            isPayment: true // User is paying this person
+                          })
+                          setShowSettlement(true)
+                        }}
+                        className="w-full mt-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <span className="text-base">{group.currencySymbol || '$'}</span>
+                        Settle Up
+                      </button>
+                    )}
                   </div>
-                  <div className="text-lg font-semibold text-[#10B981]">
-                    {group.currencySymbol || '$'}{(settlement.amount / 100).toFixed(2)}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
           </>
         )}
 
-        {/* Expenses Tab */}
+        {/* Transactions Tab */}
         {activeTab === 'expenses' && (
-          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+          <div className="rounded-xl shadow-lg">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white">
-                All Expenses
+                Transactions
               </h2>
               <button
                 onClick={() => setShowAddExpense(true)}
@@ -393,55 +423,96 @@ function GroupDetail() {
                 Add Expense
               </button>
             </div>
-            {expenses.length === 0 ? (
+            {expenses.length === 0 && settlements.length === 0 ? (
               <div className="text-center py-16 text-white/70">
                 <Receipt className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">No expenses yet</p>
+                <p className="text-lg font-medium mb-2">No transactions yet</p>
                 <p className="text-sm">Add your first expense to get started</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {expenses.map((expense: any, index: any) => {
-                  const hasMultiplePayers = expense.payments && expense.payments.length > 1
-                  const paidByText = hasMultiplePayers 
-                    ? `${expense.payments.length} people` 
-                    : expense.paidByName
-                  
-                  return (
-                    <Link
-                      key={expense._id}
-                      to="/groups/$groupId/expenses/$expenseId"
-                      params={{ groupId, expenseId: expense._id }}
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05, duration: 0.3 }}
-                        whileHover={{ scale: 1.01, x: 4 }}
-                        className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors cursor-pointer"
-                      >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="font-semibold text-lg text-white mb-1">
-                            {expense.description}
+              <div className="flex flex-col space-y-3">
+                {/* Combine and sort expenses and settlements by date */}
+                {[
+                  ...expenses.map((e: any) => ({ ...e, type: 'expense', date: e.date })),
+                  ...settlements.map((s: any) => ({ ...s, type: 'settlement', date: s.date }))
+                ]
+                  .sort((a, b) => b.date - a.date)
+                  .map((transaction: any, index: any) => {
+                    if (transaction.type === 'expense') {
+                      const hasMultiplePayers = transaction.payments && transaction.payments.length > 1
+                      const paidByText = hasMultiplePayers 
+                        ? `${transaction.payments.length} people` 
+                        : transaction.paidByName
+                      
+                      return (
+                        <Link
+                          key={transaction._id}
+                          to="/groups/$groupId/expenses/$expenseId"
+                          params={{ groupId, expenseId: transaction._id }}
+                        >
+                          <motion.div
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05, duration: 0.3 }}
+                            whileHover={{ scale: 1.01, x: 4 }}
+                            className="p-5 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20 hover:border-[#10B981]/40 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex-1">
+                                <div className="font-semibold text-lg text-white mb-1">
+                                  {transaction.description}
+                                </div>
+                                <div className="text-sm text-white/70">
+                                  Paid by <span className="font-medium">{paidByText}</span> •{' '}
+                                  {new Date(transaction.date).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <div className="text-xl font-bold text-[#10B981]">
+                                {group.currencySymbol || '$'}{(transaction.amount / 100).toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-white/60">
+                              <Users className="w-3.5 h-3.5" />
+                              Split between {transaction.splits.length} {transaction.splits.length === 1 ? 'person' : 'people'}
+                            </div>
+                          </motion.div>
+                        </Link>
+                      )
+                    } else {
+                      // Settlement
+                      return (
+                        <motion.div
+                          key={transaction._id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05, duration: 0.3 }}
+                          className="p-5 bg-blue-500/10 rounded-lg border border-blue-500/20"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="font-semibold text-lg text-white mb-1 flex items-center gap-2">
+                                <DollarSign className="w-5 h-5 text-blue-400" />
+                                Settlement Payment
+                              </div>
+                              <div className="text-sm text-white/70">
+                                <span className="font-medium">{transaction.fromUserName}</span> paid{' '}
+                                <span className="font-medium">{transaction.toUserName}</span> •{' '}
+                                {new Date(transaction.date).toLocaleDateString()}
+                              </div>
+                              {transaction.notes && (
+                                <div className="text-xs text-white/50 mt-1">
+                                  {transaction.notes}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-xl font-bold text-blue-400">
+                              {group.currencySymbol || '$'}{(transaction.amount / 100).toFixed(2)}
+                            </div>
                           </div>
-                          <div className="text-sm text-white/70">
-                            Paid by <span className="font-medium">{paidByText}</span> •{' '}
-                            {new Date(expense.date).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <div className="text-xl font-bold text-[#10B981]">
-                          {group.currencySymbol || '$'}{(expense.amount / 100).toFixed(2)}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-white/60">
-                        <Users className="w-3.5 h-3.5" />
-                        Split between {expense.splits.length} {expense.splits.length === 1 ? 'person' : 'people'}
-                      </div>
-                    </motion.div>
-                    </Link>
-                  )
-                })}
+                        </motion.div>
+                      )
+                    }
+                  })}
               </div>
             )}
           </div>
@@ -449,72 +520,15 @@ function GroupDetail() {
 
         {/* Members Tab */}
         {activeTab === 'members' && (
-          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-white">
-              Members ({group.members.length})
-            </h2>
-            <button
-              onClick={() => setShowAddMember(true)}
-              className="text-sm text-[#10B981] hover:text-[#059669] transition-colors font-medium"
-            >
-              + Add Member
-            </button>
-          </div>
-          <div className="space-y-2">
-            {group.members.map((member: any, index: number) => {
-              const memberBalance = balances.balances.find(
-                (b) => b.userId === member._id
-              )
-              const displayName = member.name || member.email || 'Unknown User'
-              return (
-                <motion.div
-                  key={member._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.3 }}
-                  whileHover={{ scale: 1.01, x: 4 }}
-                  className="flex items-center justify-between p-3 bg-[#10B981]/10 rounded-lg border border-[#10B981]/20"
-                >
-                  <div>
-                    <div className="font-medium text-white">
-                      {displayName}
-                      {member.role === 'admin' && (
-                        <span className="ml-2 text-xs bg-[#10B981] text-white px-2 py-0.5 rounded shadow-sm">
-                          Admin
-                        </span>
-                      )}
-                    </div>
-                    {member.name && member.email && (
-                      <div className="text-sm text-white/70">
-                        {member.email}
-                      </div>
-                    )}
-                  </div>
-                  {memberBalance && (
-                    <div
-                      className={`font-semibold ${
-                        memberBalance.balance > 0
-                          ? 'text-green-600 dark:text-green-400'
-                          : memberBalance.balance < 0
-                            ? 'text-red-600 dark:text-red-400'
-                            : 'text-gray-600 dark:text-gray-400'
-                      }`}
-                    >
-                      {memberBalance.balance > 0 ? '+' : ''}{group.currencySymbol || '$'}
-                      {(Math.abs(memberBalance.balance) / 100).toFixed(2)}
-                    </div>
-                  )}
-                </motion.div>
-              )
-            })}
-          </div>
-        </div>
+          <MembersTabContent 
+            group={group}
+            setShowAddMember={setShowAddMember}
+          />
         )}
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+          <div className="">
             <h2 className="text-xl font-semibold text-white mb-6">Group Settings</h2>
             <div className="space-y-4">
               <div>
@@ -592,6 +606,28 @@ function GroupDetail() {
           />
         )}
       </AnimatePresence>
+
+      {/* Settlement Drawer */}
+      <Drawer open={showSettlement} onOpenChange={setShowSettlement}>
+        <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
+          {settlementMember && (
+            <SettlementDrawer
+              groupId={groupId as any}
+              currentUserId={user._id}
+              member={settlementMember.member || settlementMember}
+              memberBalance={balances.balances.find((b) => b.userId === (settlementMember.member?._id || settlementMember._id))}
+              currencySymbol={group.currencySymbol || '$'}
+              currencyCode={group.currency || 'USD'}
+              settlementAmount={settlementMember.amount}
+              isPayment={settlementMember.isPayment}
+              onClose={() => {
+                setShowSettlement(false)
+                setSettlementMember(null)
+              }}
+            />
+          )}
+        </DrawerContent>
+      </Drawer>
         </>
       )}
 
@@ -1761,5 +1797,238 @@ function AddMemberModal({
         </div>
       </motion.div>
     </motion.div>
+  )
+}
+
+function SettlementDrawer({
+  groupId,
+  currentUserId,
+  member,
+  memberBalance,
+  currencySymbol,
+  currencyCode,
+  onClose,
+  settlementAmount,
+  isPayment,
+}: {
+  groupId: any
+  currentUserId: any
+  member: any
+  memberBalance: any
+  currencySymbol: string
+  currencyCode: string
+  onClose: () => void
+  settlementAmount?: number
+  isPayment?: boolean
+}) {
+  const [amount, setAmount] = useState('')
+  const [notes, setNotes] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  
+  const createSettlement = useMutation(api.settlements.createSettlement)
+  
+  // Use settlement amount if provided, otherwise use member balance
+  const balanceAmount = settlementAmount 
+    ? settlementAmount / 100 
+    : Math.abs(memberBalance?.balance || 0) / 100
+  
+  // Determine who owes whom
+  // If isPayment is explicitly set, use that; otherwise infer from balance
+  const iOwe = isPayment !== undefined ? isPayment : memberBalance?.balance < 0
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    
+    const settlementAmount = parseFloat(amount)
+    if (!settlementAmount || settlementAmount <= 0) {
+      setError('Please enter a valid amount')
+      return
+    }
+    
+    if (settlementAmount > balanceAmount) {
+      setError(`Amount cannot exceed ${currencySymbol}${balanceAmount.toFixed(2)}`)
+      return
+    }
+    
+    setIsSubmitting(true)
+    try {
+      await createSettlement({
+        groupId,
+        fromUser: iOwe ? currentUserId : member._id,
+        toUser: iOwe ? member._id : currentUserId,
+        amount: Math.round(settlementAmount * 100),
+        currency: currencyCode,
+        date: Date.now(),
+        notes: notes || undefined,
+      })
+      onClose()
+    } catch (err: any) {
+      setError(err.message || 'Failed to record settlement')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+  
+  return (
+    <div className="w-full max-w-md mx-auto px-2 py-6 pb-12">
+      <form onSubmit={handleSubmit}>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center font-semibold">
+            <DollarSign className="w-5 h-5" />
+          </div>
+          <h2 className="text-2xl font-bold text-white">
+            Settle Up
+          </h2>
+        </div>
+
+        {/* Settlement Info */}
+        <div className="mb-6 p-4 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20">
+          <div className="text-sm text-white/70 mb-1">
+            {iOwe ? 'You owe' : 'Owes you'}
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="font-semibold text-white">
+              {member.name || member.email || 'Unknown User'}
+            </div>
+            <div className={`text-lg font-bold ${iOwe ? 'text-red-400' : 'text-green-400'}`}>
+              {currencySymbol}{balanceAmount.toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+            <X className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Amount Input */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-white mb-2">
+            Settlement Amount *
+          </label>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 font-medium">
+              {currencySymbol}
+            </span>
+            <input
+              type="number"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all text-lg font-semibold"
+              placeholder="0.00"
+              required
+              max={balanceAmount}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setAmount(balanceAmount.toFixed(2))}
+            className="mt-2 text-xs text-[#10B981] hover:text-[#059669] transition-colors"
+          >
+            Settle full amount ({currencySymbol}{balanceAmount.toFixed(2)})
+          </button>
+        </div>
+
+        {/* Notes */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-white mb-2">
+            Notes (optional)
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-[#10B981]/30 rounded-xl focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981] bg-[#111827] text-white placeholder-white/40 transition-all resize-none"
+            placeholder="Add a note about this payment..."
+            rows={3}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 bg-transparent border-2 border-[#10B981]/30 text-white font-semibold py-3 px-4 rounded-xl transition-colors hover:bg-[#10B981]/10"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting || !amount || parseFloat(amount) <= 0}
+            className="flex-1 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>Processing...</>
+            ) : (
+              <>
+                <Check className="w-5 h-5" />
+                Record Payment
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function MembersTabContent({
+  group,
+  setShowAddMember,
+}: {
+  group: any
+  setShowAddMember: (show: boolean) => void
+}) {
+  return (
+    <div className="">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-white">
+          Members ({group.members.length})
+        </h2>
+        <button
+          onClick={() => setShowAddMember(true)}
+          className="text-sm text-[#10B981] hover:text-[#059669] transition-colors font-medium"
+        >
+          + Add Member
+        </button>
+      </div>
+      <div className="space-y-2">
+        {group.members.map((member: any, index: number) => {
+          const displayName = member.name || member.email || 'Unknown User'
+          
+          return (
+            <motion.div
+              key={member._id}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              whileHover={{ scale: 1.01, x: 4 }}
+              className="p-4 bg-[#10B981]/10 rounded-xl border border-[#10B981]/20"
+            >
+              <div className="flex items-center gap-2">
+                <div className="font-semibold text-white truncate">
+                  {displayName}
+                </div>
+                {member.role === 'admin' && (
+                  <span className="text-xs bg-[#10B981] text-white px-2 py-0.5 rounded-full font-medium flex-shrink-0">
+                    Admin
+                  </span>
+                )}
+              </div>
+              {member.name && member.email && (
+                <div className="text-xs text-white/50 truncate mt-1">
+                  {member.email}
+                </div>
+              )}
+            </motion.div>
+          )
+        })}
+      </div>
+    </div>
   )
 }

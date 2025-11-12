@@ -435,13 +435,13 @@ export const getGroupBalances = query({
 
     // Process settlements
     for (const settlement of settlements) {
-      // From user paid, so their debt decreases (balance increases)
+      // From user paid, so their balance increases (debt reduced)
       balanceMap.set(
         settlement.fromUser,
         (balanceMap.get(settlement.fromUser) || 0) + settlement.amount
       );
 
-      // To user received, so their credit decreases (balance decreases)
+      // To user received, so their balance decreases (credit reduced)
       balanceMap.set(
         settlement.toUser,
         (balanceMap.get(settlement.toUser) || 0) - settlement.amount
@@ -502,6 +502,7 @@ function calculateSettlements(
 
   const creditors = balances
     .filter((b) => b.balance > 0)
+    .map((b) => ({ ...b })) // Create copies to avoid mutating original balances
     .sort((a, b) => b.balance - a.balance);
 
   let i = 0;
@@ -532,3 +533,109 @@ function calculateSettlements(
 
   return settlements;
 }
+
+// Calculate pairwise balances between a specific user and all other group members
+export const getPairwiseBalances = query({
+  args: { 
+    groupId: v.id("groups"),
+    userId: v.id("users")
+  },
+  returns: v.array(
+    v.object({
+      userId: v.id("users"),
+      userName: v.string(),
+      userEmail: v.string(),
+      balance: v.number(), // Positive = they owe you, Negative = you owe them
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Get all expenses for the group
+    const expenses = await ctx.db
+      .query("expenses")
+      .withIndex("by_group", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Get all settlements
+    const settlements = await ctx.db
+      .query("settlements")
+      .withIndex("by_group", (q) => q.eq("groupId", args.groupId))
+      .collect();
+
+    // Calculate pairwise balance between current user and each other user
+    const pairwiseBalances = new Map<Id<"users">, number>();
+
+    // Process expenses
+    for (const expense of expenses) {
+      const splits = await ctx.db
+        .query("expenseSplits")
+        .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
+        .collect();
+
+      const payments = await ctx.db
+        .query("expensePayments")
+        .withIndex("by_expense", (q) => q.eq("expenseId", expense._id))
+        .collect();
+
+      // Find what current user paid and owes
+      const userPayment = payments.find(p => p.userId === args.userId)?.amount || 0;
+      const userSplit = splits.find(s => s.userId === args.userId)?.amount || 0;
+
+      // For each other user, calculate pairwise balance
+      for (const split of splits) {
+        if (split.userId === args.userId) continue;
+
+        const otherUserPayment = payments.find(p => p.userId === split.userId)?.amount || 0;
+        
+        // If current user paid and other user has a split, other user owes current user
+        if (userPayment > 0) {
+          const shareOfPayment = (userPayment * split.amount) / expense.amount;
+          pairwiseBalances.set(
+            split.userId,
+            (pairwiseBalances.get(split.userId) || 0) + shareOfPayment
+          );
+        }
+
+        // If other user paid and current user has a split, current user owes other user
+        if (otherUserPayment > 0 && userSplit > 0) {
+          const shareOfPayment = (otherUserPayment * userSplit) / expense.amount;
+          pairwiseBalances.set(
+            split.userId,
+            (pairwiseBalances.get(split.userId) || 0) - shareOfPayment
+          );
+        }
+      }
+    }
+
+    // Process settlements between current user and others
+    for (const settlement of settlements) {
+      if (settlement.fromUser === args.userId) {
+        // Current user paid someone - reduces what current user owes them
+        pairwiseBalances.set(
+          settlement.toUser,
+          (pairwiseBalances.get(settlement.toUser) || 0) + settlement.amount
+        );
+      } else if (settlement.toUser === args.userId) {
+        // Someone paid current user - reduces what they owe current user
+        pairwiseBalances.set(
+          settlement.fromUser,
+          (pairwiseBalances.get(settlement.fromUser) || 0) - settlement.amount
+        );
+      }
+    }
+
+    // Get user details and format balances
+    const balances = await Promise.all(
+      Array.from(pairwiseBalances.entries()).map(async ([userId, balance]) => {
+        const user = await ctx.db.get(userId);
+        return {
+          userId,
+          userName: user?.name ?? "Unknown",
+          userEmail: user?.email ?? "",
+          balance: Math.round(balance),
+        };
+      })
+    );
+
+    return balances.filter(b => b.balance !== 0);
+  },
+});

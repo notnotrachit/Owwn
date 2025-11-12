@@ -63,7 +63,7 @@ export function GroupBottomNav({
           >
             <div className="flex flex-col items-center gap-1">
               <CreditCard className="w-4 h-4" />
-              <span className="text-[10px]">Expenses</span>
+              <span className="text-[10px]">Transactions</span>
             </div>
           </button>
 
