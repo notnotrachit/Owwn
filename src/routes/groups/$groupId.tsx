@@ -4,8 +4,8 @@ import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
 import { useMutation, useConvex } from 'convex/react'
-import { useState, Suspense } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet} from 'lucide-react'
+import { useState, Suspense, useEffect, useRef } from 'react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet, Download} from 'lucide-react'
 import { GroupBottomNav } from '~/components/GroupBottomNav'
 import { motion, AnimatePresence } from 'motion/react'
 import { Drawer, DrawerContent } from '~/components/ui/drawer'
@@ -318,7 +318,7 @@ function GroupDetail() {
 
         {/* Suggested Settlements */}
         {balances.settlements.length > 0 && (
-          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30 mb-8">
             <h2 className="text-xl font-semibold text-white mb-4">
               Suggested Settlements
             </h2>
@@ -369,6 +369,11 @@ function GroupDetail() {
             </div>
           </div>
         )}
+
+        {/* Export Data Section */}
+        <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30">
+          <ExportDataSection group={group} user={user} />
+        </div>
           </>
         )}
 
@@ -1968,6 +1973,177 @@ function SettlementDrawer({
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+function ExportDataSection({ group, user }: { group: any; user: any }) {
+  const convex = useConvex()
+  const [isExporting, setIsExporting] = useState(false)
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false)
+      }
+    }
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showExportMenu])
+
+  const handleExport = async (format: 'json' | 'csv') => {
+    if (!user) return
+    
+    setIsExporting(true)
+    try {
+      const data = await convex.query(api.export.exportGroupData, {
+        groupId: group._id,
+        userId: user._id,
+      })
+
+      if (format === 'json') {
+        // Export as JSON
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${group.name.replace(/\s+/g, '_')}_export_${new Date().toISOString().split('T')[0]}.json`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        // Export as CSV
+        const csvContent = generateCSV(data)
+        const blob = new Blob([csvContent], { type: 'text/csv' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${group.name.replace(/\s+/g, '_')}_export_${new Date().toISOString().split('T')[0]}.csv`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+      
+      setShowExportMenu(false)
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Failed to export data. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const generateCSV = (data: any) => {
+    const lines: string[] = []
+    
+    // Group Info
+    lines.push('GROUP INFORMATION')
+    lines.push(`Name,${data.group.name}`)
+    lines.push(`Description,${data.group.description || 'N/A'}`)
+    lines.push(`Currency,${data.group.currency || 'USD'}`)
+    lines.push(`Created At,${new Date(data.group.createdAt).toLocaleString()}`)
+    lines.push('')
+    
+    // Members
+    lines.push('MEMBERS')
+    lines.push('Name,Email,Role')
+    data.members.forEach((member: any) => {
+      lines.push(`${member.name},${member.email},${member.role}`)
+    })
+    lines.push('')
+    
+    // Balances
+    lines.push('BALANCES')
+    lines.push('Name,Email,Balance')
+    data.balances.forEach((balance: any) => {
+      const balanceAmount = (balance.balance / 100).toFixed(2)
+      const sign = balance.balance >= 0 ? '+' : ''
+      lines.push(`${balance.userName},${balance.userEmail},${sign}${balanceAmount}`)
+    })
+    lines.push('')
+    
+    // Expenses
+    lines.push('EXPENSES')
+    lines.push('Date,Description,Amount,Category,Paid By,Split Between')
+    data.expenses.forEach((expense: any) => {
+      const date = new Date(expense.date).toLocaleDateString()
+      const amount = (expense.amount / 100).toFixed(2)
+      const splitNames = expense.splits.map((s: any) => s.userName).join('; ')
+      lines.push(`${date},${expense.description},${amount},${expense.category || 'N/A'},${expense.paidBy.userName},"${splitNames}"`)
+    })
+    lines.push('')
+    
+    // Settlements
+    if (data.settlements.length > 0) {
+      lines.push('SETTLEMENTS')
+      lines.push('Date,From,To,Amount,Notes')
+      data.settlements.forEach((settlement: any) => {
+        const date = new Date(settlement.date).toLocaleDateString()
+        const amount = (settlement.amount / 100).toFixed(2)
+        lines.push(`${date},${settlement.fromUser.userName},${settlement.toUser.userName},${amount},${settlement.notes || 'N/A'}`)
+      })
+      lines.push('')
+    }
+    
+    // Export Info
+    lines.push('EXPORT INFORMATION')
+    lines.push(`Exported At,${new Date(data.exportedAt).toLocaleString()}`)
+    lines.push(`Exported By,${data.exportedBy.userName}`)
+    
+    return lines.join('\n')
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-semibold text-white mb-1">Export Group Data</h2>
+          <p className="text-sm text-white/60">Download all expenses, settlements, and balances</p>
+        </div>
+        <div className="relative" ref={exportMenuRef}>
+          <button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={isExporting}
+            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white px-4 py-2.5 rounded-xl transition-colors font-medium shadow-lg disabled:opacity-50"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isExporting ? 'Exporting...' : 'Export'}</span>
+          </button>
+          {showExportMenu && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute right-0 mt-2 w-48 bg-[#101418] border border-[#10B981]/30 rounded-lg shadow-xl z-50 overflow-hidden"
+            >
+              <button
+                onClick={() => handleExport('json')}
+                disabled={isExporting}
+                className="w-full px-4 py-3 text-left text-sm text-white hover:bg-[#10B981]/20 transition-colors disabled:opacity-50 flex items-center justify-between"
+              >
+                <span>Export as JSON</span>
+                <span className="text-xs text-white/50">.json</span>
+              </button>
+              <button
+                onClick={() => handleExport('csv')}
+                disabled={isExporting}
+                className="w-full px-4 py-3 text-left text-sm text-white hover:bg-[#10B981]/20 transition-colors disabled:opacity-50 flex items-center justify-between border-t border-[#10B981]/20"
+              >
+                <span>Export as CSV</span>
+                <span className="text-xs text-white/50">.csv</span>
+              </button>
+            </motion.div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

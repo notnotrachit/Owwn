@@ -4,11 +4,11 @@
 - [ ] Notifications (push notifications for new expenses, settlements, etc.)
 - [ ] PWA (Progressive Web App)
 - [ ] Expense categories analytics/insights
-- [ ] Export data (CSV, PDF reports)
-- [ ] Recurring expenses
-- [ ] Group activity feed/history
+- [x] Export data (CSV, PDF reports)
 
 ## Good to Have
+- [ ] Edit Transaction
+- [ ] Edit history
 - [ ] Expose as MCP Server
 - [ ] Multi-currency support with exchange rates
 - [ ] Receipt image upload and OCR
@@ -19,6 +19,10 @@
 - [ ] Budget limits per category
 - [ ] Debt simplification visualization
 - [ ] Transaction edit and edit history
+- [ ] Recurring expenses
+- [ ] Group activity feed/history
+
+
 
 ## Maybe in Future
 - [ ] Mobile App that can read from transaction sms (UPI, Venmo, PayPal)

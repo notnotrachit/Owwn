@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as expenses from "../expenses.js";
+import type * as export_ from "../export.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as settlements from "../settlements.js";
@@ -32,6 +33,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   expenses: typeof expenses;
+  export: typeof export_;
   groups: typeof groups;
   http: typeof http;
   settlements: typeof settlements;
