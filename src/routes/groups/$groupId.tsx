@@ -52,9 +52,9 @@ function GroupDetail() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [showSettlement, setShowSettlement] = useState(false)
   const [settlementMember, setSettlementMember] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'expenses' | 'members' | 'balances' | 'activity' | 'settings'>('expenses')
-  const [editingName, setEditingName] = useState('')
-  const [editingDescription, setEditingDescription] = useState('')
+  const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members' | 'balances' | 'activity' | 'settings'>('expenses')
+  const [, setEditingName] = useState('')
+  const [, setEditingDescription] = useState('')
 
   // Check if we're on a child route (e.g., expense details)
   const isOnChildRoute = matches.length > 2 // Root + Group + Child

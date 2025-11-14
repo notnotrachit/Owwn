@@ -3,7 +3,7 @@ import { useAuth } from '~/lib/auth-context'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../convex/_generated/api'
-import { Users, ArrowRight, Receipt, TrendingUp, Sparkles, LogOut, Plus, DollarSign } from 'lucide-react'
+import { Users, ArrowRight, Receipt, TrendingUp, Sparkles, LogOut, Plus, DollarSign, Settings } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Drawer, DrawerContent, DrawerTrigger } from '~/components/ui/drawer'
 import { useState } from 'react'
@@ -235,7 +235,7 @@ function Home() {
   return <Dashboard user={user} />
 }
 
-function Dashboard({ user }: { user: { _id: any; name: string; email: string } }) {
+function Dashboard({ user }: { user: { _id: any; name?: string; email?: string } }) {
   const { signOut } = useAuth()
   const { data: groups = [] } = useSuspenseQuery(
     convexQuery(api.groups.getUserGroups, { userId: user._id })
@@ -266,6 +266,13 @@ function Dashboard({ user }: { user: { _id: any; name: string; email: string } }
                 {user.email}
               </p>
             </div>
+            <Link
+              to="/settings"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-[#10B981]/20 rounded-lg transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">Settings</span>
+            </Link>
             <button
               onClick={signOut}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white hover:bg-[#10B981]/20 rounded-lg transition-colors"

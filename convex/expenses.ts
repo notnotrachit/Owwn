@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 
 // Create a new expense
 export const createExpense = mutation({
@@ -637,5 +637,37 @@ export const getPairwiseBalances = query({
     );
 
     return balances.filter(b => b.balance !== 0);
+  },
+});
+
+// Create a settlement/payment between group members
+export const createSettlement = mutation({
+  args: {
+    groupId: v.id("groups"),
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+    amount: v.number(),
+    notes: v.optional(v.string()),
+  },
+  returns: v.id("settlements"),
+  handler: async (ctx, args) => {
+    // Verify group exists
+    const group = await ctx.db.get(args.groupId);
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    // Create the settlement
+    const settlementId = await ctx.db.insert("settlements", {
+      groupId: args.groupId,
+      fromUser: args.fromUserId,
+      toUser: args.toUserId,
+      amount: args.amount,
+      currency: group.currency || "USD",
+      date: Date.now(),
+      notes: args.notes,
+    });
+
+    return settlementId;
   },
 });

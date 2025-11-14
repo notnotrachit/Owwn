@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as expenses from "../expenses.js";
 import type * as export_ from "../export.js";
@@ -31,6 +32,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  apiKeys: typeof apiKeys;
   auth: typeof auth;
   expenses: typeof expenses;
   export: typeof export_;

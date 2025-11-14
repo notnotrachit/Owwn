@@ -87,4 +87,26 @@ export default defineSchema({
     .index("by_from_user", ["fromUser"])
     .index("by_to_user", ["toUser"])
     .index("by_group_and_date", ["groupId", "date"]),
+
+  // API Keys for MCP server access
+  apiKeys: defineTable({
+    userId: v.id("users"),
+    key: v.string(), // Hashed API key
+    name: v.string(), // User-friendly name for the key
+    lastUsed: v.optional(v.number()), // Timestamp of last use
+    expiresAt: v.optional(v.number()), // Optional expiration timestamp
+    isActive: v.boolean(), // Whether the key is active
+  })
+    .index("by_user", ["userId"])
+    .index("by_key", ["key"]),
+
+  // MCP Sessions for tracking active connections
+  mcpSessions: defineTable({
+    sessionId: v.string(),
+    userId: v.id("users"),
+    keyId: v.id("apiKeys"),
+    lastActivity: v.number(),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_user", ["userId"]),
 });

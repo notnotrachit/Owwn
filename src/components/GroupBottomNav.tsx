@@ -4,9 +4,9 @@ import { motion } from 'motion/react'
 
 interface GroupBottomNavProps {
   groupId: string
-  activeTab: 'expenses' | 'members' | 'balances' | 'activity' | 'settings'
+  activeTab: 'overview' | 'expenses' | 'members' | 'balances' | 'activity' | 'settings'
   isOnChildRoute: boolean
-  onTabChange: (tab: 'expenses' | 'members' | 'balances' | 'activity' | 'settings') => void
+  onTabChange: (tab: 'overview' | 'expenses' | 'members' | 'balances' | 'activity' | 'settings') => void
   onAddExpense: () => void
 }
 
@@ -19,7 +19,7 @@ export function GroupBottomNav({
 }: GroupBottomNavProps) {
   const navigate = useNavigate()
 
-  const handleTabClick = (tab: 'expenses' | 'members' | 'balances' | 'activity' | 'settings') => {
+  const handleTabClick = (tab: 'overview' | 'expenses' | 'members' | 'balances' | 'activity' | 'settings') => {
     if (isOnChildRoute) {
       navigate({ to: '/groups/$groupId', params: { groupId } })
     }
@@ -46,7 +46,7 @@ export function GroupBottomNav({
 
   const getActiveTab = () => {
     if (isOnChildRoute) return 'expenses'
-    return activeTab === 'overview' ? 'overview' : activeTab
+    return activeTab
   }
 
   return (
