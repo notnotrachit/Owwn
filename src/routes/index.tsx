@@ -179,21 +179,24 @@ function Home() {
 
   if (!user) {
     return (
-      <div className="min-h-[100dvh] bg-[#0A0F12] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#101418] rounded-2xl shadow-xl p-8 border border-[#10B981]/30">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-[#10B981] text-white mb-4">
-              <Sparkles className="w-7 h-7" />
-            </div>
-            <h1 className="text-4xl font-extrabold text-white mb-2 font-audiowide">Owwn</h1>
-            <p className="text-white/70">Own what you owe</p>
-          </div>
+      <div className="min-h-[100dvh] bg-gradient-to-b from-[#020617] via-[#020817] to-[#020617] text-white">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-40 -left-40 w-80 h-80 bg-[#10B981]/20 blur-3xl rounded-full opacity-60" />
+          <div className="absolute top-40 -right-32 w-72 h-72 bg-emerald-500/20 blur-3xl rounded-full opacity-60" />
+        </div>
 
-          <div className="space-y-4">
-            <p className="text-white/80 text-center mb-6">
-              Split expenses with friends, roommates, and groups. Track who
-              owes what and settle up easily.
-            </p>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16 flex flex-col gap-12">
+          {/* Top nav */}
+          <header className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#10B981] flex items-center justify-center shadow-lg shadow-emerald-500/40">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold font-audiowide tracking-tight">Owwn</h1>
+                <p className="text-xs sm:text-sm text-white/60">Own what you owe</p>
+              </div>
+            </div>
             <button
               onClick={async () => {
                 try {
@@ -202,31 +205,170 @@ function Home() {
                   console.error('Google sign-in failed:', err)
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-semibold py-3 px-6 rounded-xl transition-colors"
+              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-sm font-medium text-white transition-colors"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Continue with Google
+              Sign in
             </button>
-            <div className="grid grid-cols-3 gap-4 mt-8">
-              <div className="text-center p-4 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30">
-                <Receipt className="w-6 h-6 text-[#10B981] mx-auto mb-2" />
-                <p className="text-xs font-medium text-white/80">Track Expenses</p>
+          </header>
+
+          <main className="grid lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-10 items-center">
+            {/* Hero copy */}
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-100">
+                <span className="inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                AI‑powered group expense tracking
               </div>
-              <div className="text-center p-4 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30">
-                <Users className="w-6 h-6 text-[#10B981] mx-auto mb-2" />
-                <p className="text-xs font-medium text-white/80">Split Bills</p>
+
+              <div className="space-y-4">
+                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+                  Split bills without
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-teal-300"> awkward maths.</span>
+                </h2>
+                <p className="text-base sm:text-lg text-white/70 max-w-xl">
+                  Owwn keeps every trip, flatshare, and dinner night fair. Add expenses in seconds, let AI do the splitting, and see who owes what at a glance.
+                </p>
               </div>
-              <div className="text-center p-4 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30">
-                <TrendingUp className="w-6 h-6 text-[#10B981] mx-auto mb-2" />
-                <p className="text-xs font-medium text-white/80">Settle Up</p>
+
+              <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                <button
+                  onClick={async () => {
+                    try {
+                      await signInWithGoogle()
+                    } catch (err: any) {
+                      console.error('Google sign-in failed:', err)
+                    }
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-gray-900 hover:bg-gray-100 font-semibold px-5 py-3 text-sm sm:text-base shadow-lg shadow-emerald-500/30 w-full sm:w-auto"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Continue with Google
+                </button>
+                <div className="flex flex-wrap gap-2 text-xs text-white/60">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                    <Receipt className="w-3 h-3" />
+                    Track every bill
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/5 border border-white/10">
+                    <Users className="w-3 h-3" />
+                    Built for real groups
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-3">
+                  <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-300">
+                    <Receipt className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1">Smart expense timelines</p>
+                    <p className="text-xs text-white/60">See every trip, dinner, and bill in one clean feed.</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-3">
+                  <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-300">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1">Balances that make sense</p>
+                    <p className="text-xs text-white/60">Always know who owes whom — and how much.</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-4 flex flex-col gap-3">
+                  <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-300">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold mb-1">AI‑powered inputs</p>
+                    <p className="text-xs text-white/60">Type "split pizza between us" and let Owwn handle the math.</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+
+            {/* Right side "app preview" card */}
+            <div className="relative">
+              <div className="absolute -inset-0.5 bg-gradient-to-br from-emerald-400/50 via-emerald-500/10 to-cyan-400/40 rounded-[2rem] blur-xl opacity-60" />
+              <div className="relative rounded-[1.7rem] bg-[#050A0F] border border-emerald-500/40 shadow-[0_20px_60px_rgba(16,185,129,0.45)] px-5 py-6 max-w-sm mx-auto">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#10B981] flex items-center justify-center text-white">
+                      <Users className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-white/60">Trip group</p>
+                      <p className="text-sm font-semibold">Goa 2025</p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/40 text-emerald-200">
+                    All synced
+                  </span>
+                </div>
+
+                <div className="rounded-2xl bg-[#050712] border border-emerald-500/30 p-4 mb-4">
+                  <p className="text-xs text-white/60 mb-1">Your balance</p>
+                  <p className="text-3xl font-bold text-emerald-300 mb-1">₹ 2,430.50</p>
+                  <p className="text-[11px] inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-200">
+                    <TrendingUp className="w-3 h-3" />
+                    You are owed overall
+                  </p>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
+                        <span className="text-[11px]">MK</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Madhav</p>
+                        <p className="text-[11px] text-white/50">Owes you</p>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-emerald-300">₹ 1,203.30</p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center">
+                        <span className="text-[11px]">CK</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">Chirag</p>
+                        <p className="text-[11px] text-white/50">You owe</p>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-red-400">₹ 540.20</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                  <div>
+                    <p className="text-[11px] text-white/50 mb-1">Settle up in one tap</p>
+                    <p className="text-xs text-white/70">We suggest the minimal repayments so everyone is square.</p>
+                  </div>
+                  <button className="ml-3 inline-flex items-center justify-center rounded-xl bg-[#10B981] hover:bg-[#059669] text-white text-[11px] font-semibold px-3 py-2">
+                    Settle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </main>
+
+          <footer className="pt-4 pb-6 text-[11px] text-white/40 flex flex-wrap items-center justify-between gap-2">
+            <p>Made for trips, flats, and friend groups who hate spreadsheets.</p>
+            <p>Sign in with Google to get started in under 10 seconds.</p>
+          </footer>
         </div>
       </div>
     )
