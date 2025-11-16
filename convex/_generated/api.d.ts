@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as ai from "../ai.js";
 import type * as apiKeys from "../apiKeys.js";
 import type * as auth from "../auth.js";
 import type * as expenses from "../expenses.js";
@@ -32,6 +33,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  ai: typeof ai;
   apiKeys: typeof apiKeys;
   auth: typeof auth;
   expenses: typeof expenses;

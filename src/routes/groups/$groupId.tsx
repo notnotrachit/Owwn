@@ -3,9 +3,9 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { convexQuery } from '@convex-dev/react-query'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '~/lib/auth-context'
-import { useMutation, useConvex } from 'convex/react'
+import { useMutation, useConvex, useAction } from 'convex/react'
 import { useState, Suspense, useEffect, useRef } from 'react'
-import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet, Download} from 'lucide-react'
+import { ArrowLeft, Plus, Users, Receipt, DollarSign, TrendingUp, UserPlus, X, Search, Check, ChevronsUpDown, LayoutGrid, CreditCard, UserCheck, UtensilsCrossed, Car, Popcorn, Zap, ShoppingBag, MoreHorizontal, Wallet, Download, Sparkles} from 'lucide-react'
 import { GroupBottomNav } from '~/components/GroupBottomNav'
 import { motion, AnimatePresence } from 'motion/react'
 import { Drawer, DrawerContent } from '~/components/ui/drawer'
@@ -52,9 +52,13 @@ function GroupDetail() {
   const [showAddMember, setShowAddMember] = useState(false)
   const [showSettlement, setShowSettlement] = useState(false)
   const [settlementMember, setSettlementMember] = useState<any>(null)
+  const [showAiAssistant, setShowAiAssistant] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'expenses' | 'members' | 'balances' | 'activity' | 'settings'>('expenses')
   const [, setEditingName] = useState('')
   const [, setEditingDescription] = useState('')
+  const [aiInstruction, setAiInstruction] = useState('')
+  const [aiStatus, setAiStatus] = useState<string | null>(null)
+  const [aiLoading, setAiLoading] = useState(false)
 
   // Check if we're on a child route (e.g., expense details)
   const isOnChildRoute = matches.length > 2 // Root + Group + Child
@@ -74,6 +78,8 @@ function GroupDetail() {
   const { data: balances } = useSuspenseQuery(
     convexQuery(api.expenses.getGroupBalances, { groupId: groupId as any })
   )
+
+  const createFromInstruction = useAction(api.ai.createExpenseFromInstruction)
 
   // Show loading skeleton while auth is loading
   if (isAuthLoading) {
@@ -380,16 +386,17 @@ function GroupDetail() {
         {/* Transactions Tab */}
         {activeTab === 'expenses' && (
           <div className="rounded-xl shadow-lg">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 gap-4">
               <h2 className="text-2xl font-bold text-white">
                 Transactions
               </h2>
               <button
                 onClick={() => setShowAddExpense(true)}
-                className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md"
+                className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-md text-sm"
               >
                 <Plus className="w-4 h-4" />
-                Add Expense
+                <span className="hidden sm:inline">Add Expense</span>
+                <span className="sm:hidden">Add</span>
               </button>
             </div>
             {expenses.length === 0 && settlements.length === 0 ? (
@@ -545,6 +552,80 @@ function GroupDetail() {
             currencyCode={group.currency || "USD"}
             onClose={() => setShowAddExpense(false)}
           />
+        </DrawerContent>
+      </Drawer>
+
+      {/* Floating AI Assistant Button - visible on all main group tabs */}
+      {!isOnChildRoute && (
+        <button
+          onClick={() => setShowAiAssistant(true)}
+          className="fixed left-6 bottom-24 md:bottom-10 z-40 inline-flex items-center justify-center rounded-full bg-[#10B981] hover:bg-[#059669] text-white shadow-xl w-12 h-12 border border-[#10B981]/40"
+        >
+          <Sparkles className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* AI Assistant Drawer */}
+      <Drawer open={showAiAssistant} onOpenChange={setShowAiAssistant}>
+        <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-10 max-h-[70dvh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#10B981]" />
+                <h2 className="text-lg font-semibold text-white">AI expense assistant</h2>
+              </div>
+              <button
+                onClick={() => setShowAiAssistant(false)}
+                className="p-1 rounded-full hover:bg-white/10 text-white/70 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-white/60 mb-3">
+              Describe the expense in natural language. The AI will create an equal-split expense for this group.
+            </p>
+            <div className="flex flex-col gap-3">
+              <textarea
+                value={aiInstruction}
+                onChange={(e) => setAiInstruction(e.target.value)}
+                placeholder="e.g. Split a pizza expense between me, Madhav and Chirag in this group for ₹900"
+                rows={3}
+                className="w-full px-3 py-2 rounded-lg bg-[#0B1014] border border-white/10 text-sm text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#10B981] focus:border-[#10B981]"
+              />
+              <button
+                disabled={aiLoading || !aiInstruction.trim()}
+                onClick={async () => {
+                  if (!aiInstruction.trim()) return
+                  setAiLoading(true)
+                  setAiStatus(null)
+                  try {
+                    const res = await createFromInstruction({
+                      groupId: groupId as any,
+                      userId: user._id,
+                      instruction: aiInstruction.trim(),
+                    })
+                    if (res.success) {
+                      setAiStatus('Created expense from instruction.')
+                      setAiInstruction('')
+                    } else {
+                      setAiStatus(res.message || 'Could not create expense from instruction.')
+                    }
+                  } catch (err: any) {
+                    console.error('AI expense error', err)
+                    setAiStatus('Something went wrong while using AI.')
+                  } finally {
+                    setAiLoading(false)
+                  }
+                }}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] disabled:opacity-60 disabled:cursor-not-allowed text-sm font-semibold text-white whitespace-nowrap transition-colors"
+              >
+                {aiLoading ? 'Thinking…' : 'Create expense'}
+              </button>
+              {aiStatus && (
+                <p className="text-xs text-white/70">{aiStatus}</p>
+              )}
+            </div>
+          </div>
         </DrawerContent>
       </Drawer>
 
