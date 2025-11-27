@@ -74,7 +74,7 @@ export const Route = createRootRouteWithContext<{
         sizes: '16x16',
         href: '/favicon-16x16.png',
       },
-      { rel: 'manifest', href: '/site.webmanifest', color: '#fffff' },
+      { rel: 'manifest', href: '/manifest.webmanifest', color: '#fffff' },
       { rel: 'icon', href: '/favicon.ico' },
     ],
   }),
@@ -92,12 +92,25 @@ function RootComponent() {
       meta.name = 'view-transition'
       meta.content = 'same-origin'
       document.head.appendChild(meta)
-      
+
       return () => {
         if (document.head.contains(meta)) {
           document.head.removeChild(meta)
         }
       }
+    }
+  }, [])
+
+  // Register Service Worker
+  React.useEffect(() => {
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      const loadSW = async () => {
+        const { registerSW } = await import('virtual:pwa-register')
+        registerSW({
+          immediate: true,
+        })
+      }
+      loadSW()
     }
   }, [])
 
