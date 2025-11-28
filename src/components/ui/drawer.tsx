@@ -3,10 +3,72 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "~/lib/utils"
 
+// iOS Safari viewport fix for keyboard
+function useIOSViewportFix(isOpen: boolean) {
+  React.useEffect(() => {
+    if (!isOpen) return
+    
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    
+    if (!isIOS) return
+
+    // Store original values
+    const originalStyle = document.body.style.cssText
+    const html = document.documentElement
+    const originalHtmlStyle = html.style.cssText
+    
+    // Prevent body scroll and fix position
+    document.body.style.position = 'fixed'
+    document.body.style.width = '100%'
+    document.body.style.height = '100%'
+    document.body.style.overflow = 'hidden'
+    html.style.overflow = 'hidden'
+    html.style.height = '100%'
+
+    // Handle visual viewport changes (keyboard open/close)
+    const handleViewportChange = () => {
+      if (window.visualViewport) {
+        const viewport = window.visualViewport
+        // Update CSS custom property for drawer positioning
+        document.documentElement.style.setProperty(
+          '--visual-viewport-height',
+          `${viewport.height}px`
+        )
+      }
+    }
+
+    // Initial set
+    handleViewportChange()
+
+    // Listen for viewport changes
+    window.visualViewport?.addEventListener('resize', handleViewportChange)
+    window.visualViewport?.addEventListener('scroll', handleViewportChange)
+
+    return () => {
+      document.body.style.cssText = originalStyle
+      html.style.cssText = originalHtmlStyle
+      document.documentElement.style.removeProperty('--visual-viewport-height')
+      window.visualViewport?.removeEventListener('resize', handleViewportChange)
+      window.visualViewport?.removeEventListener('scroll', handleViewportChange)
+    }
+  }, [isOpen])
+}
+
 function Drawer({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  // Apply iOS viewport fix when drawer is open
+  useIOSViewportFix(props.open ?? false)
+  
+  return (
+    <DrawerPrimitive.Root 
+      data-slot="drawer" 
+      preventScrollRestoration
+      setBackgroundColorOnScale={false}
+      {...props} 
+    />
+  )
 }
 
 function DrawerTrigger({
@@ -48,6 +110,28 @@ function DrawerContent({
   children,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+  // Handle input focus to prevent iOS keyboard issues
+  React.useEffect(() => {
+    const scrollContainer = scrollContainerRef.current
+    if (!scrollContainer) return
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        // Small delay to let iOS keyboard animation start
+        setTimeout(() => {
+          // Scroll the input into view within the drawer
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 150)
+      }
+    }
+
+    scrollContainer.addEventListener('focusin', handleFocusIn)
+    return () => scrollContainer.removeEventListener('focusin', handleFocusIn)
+  }, [])
+
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
@@ -55,8 +139,10 @@ function DrawerContent({
         data-slot="drawer-content"
         className={cn(
           "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
+          // iOS Safari fix: use visual viewport height when available
+          "supports-[height:100dvh]:max-h-[85dvh]",
           "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b",
-          "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t",
+          "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t",
           "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:border-l data-[vaul-drawer-direction=right]:sm:max-w-sm",
           "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:border-r data-[vaul-drawer-direction=left]:sm:max-w-sm",
           className
@@ -64,7 +150,13 @@ function DrawerContent({
         {...props}
       >
         <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
-        {children}
+        <div 
+          ref={scrollContainerRef}
+          className="overflow-y-auto overscroll-contain flex-1"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {children}
+        </div>
       </DrawerPrimitive.Content>
     </DrawerPortal>
   )

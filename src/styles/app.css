@@ -36,8 +36,47 @@
     touch-action: manipulation;
   }
 
+  /* iOS Safari drawer/modal input focus fixes */
+  html {
+    /* Use dvh for proper iOS Safari viewport handling */
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+  
+  body {
+    min-height: 100%;
+    min-height: -webkit-fill-available;
+  }
+
   .using-mouse * {
     outline: none !important;
+  }
+}
+
+/* iOS Safari drawer keyboard fixes */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  [data-vaul-drawer] {
+    /* Prevent iOS rubber-banding on drawer */
+    overscroll-behavior: contain;
+  }
+  
+  [data-vaul-drawer-direction="bottom"] [data-slot="drawer-content"] {
+    /* Use visual viewport height on iOS when keyboard is open */
+    max-height: var(--visual-viewport-height, 85dvh);
+    /* Smooth transition when keyboard opens/closes */
+    transition: max-height 0.1s ease-out;
+  }
+  
+  /* Prevent input zoom on iOS Safari */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  textarea,
+  select {
+    font-size: 16px !important;
   }
 }
 
