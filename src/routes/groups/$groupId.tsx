@@ -132,6 +132,22 @@ function GroupDetail() {
 
   const userBalance = balances.balances.find((b) => b.userId === user._id)
 
+  // Calculate total amount user has paid (spent) in this group
+  const totalUserSpent = expenses.reduce((total: number, expense: any) => {
+    // Check if user paid via multiple payers
+    if (expense.payments && expense.payments.length > 0) {
+      const userPayment = expense.payments.find((p: any) => p.userId === user._id)
+      if (userPayment) {
+        return total + userPayment.amount
+      }
+    }
+    // Check if user is the single payer
+    if (expense.paidBy === user._id) {
+      return total + expense.amount
+    }
+    return total
+  }, 0)
+
   return (
     <motion.div 
       className="min-h-[100dvh] bg-[#0A0F12]"
@@ -321,6 +337,26 @@ function GroupDetail() {
             </div>
           )}
         </div>
+
+        {/* Total Spent Card */}
+        {totalUserSpent > 0 && (
+          <div className="bg-[#101418] rounded-xl shadow-lg p-6 border border-[#10B981]/30 mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shadow-md">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-bold text-white">
+                Total You Paid
+              </h2>
+            </div>
+            <div className="text-3xl font-bold text-blue-400">
+              {group.currencySymbol || '$'}{(totalUserSpent / 100).toFixed(2)}
+            </div>
+            <p className="text-sm text-white/50 mt-2">
+              Total amount you've paid for in this group
+            </p>
+          </div>
+        )}
 
         {/* Suggested Settlements */}
         {balances.settlements.length > 0 && (
@@ -568,7 +604,7 @@ function GroupDetail() {
       {/* AI Assistant Drawer */}
       <Drawer open={showAiAssistant} onOpenChange={setShowAiAssistant}>
         <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
-          <div className="w-full max-w-md mx-auto px-4 py-6 pb-10 max-h-[70dvh] overflow-y-auto">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-8">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#10B981]" />
@@ -842,7 +878,7 @@ function AddExpenseDrawer({
   }
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-6 pb-12 max-h-[75dvh] overflow-y-auto overscroll-contain">
+    <div className="w-full max-w-md mx-auto px-4 py-6 pb-8">
       <h2 className="text-xl font-bold text-white mb-6">Add Expense</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Amount - Prominent centered display */}
@@ -978,7 +1014,7 @@ function AddExpenseDrawer({
       {/* Nested Split Configuration Drawer */}
       <Drawer open={splitDrawerOpen} onOpenChange={setSplitDrawerOpen}>
         <DrawerContent className="bg-[#0A0F12] border-t border-[#10B981]/30">
-          <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-8">
             <h3 className="text-lg font-bold text-white mb-4">Configure Split</h3>
             
             <div className="space-y-4">
@@ -1228,7 +1264,7 @@ function AddExpenseDrawer({
       {/* Paid By Configuration Drawer */}
       <Drawer open={paidByDrawerOpen} onOpenChange={setPaidByDrawerOpen}>
         <DrawerContent className="bg-[#0A0F12] border-t border-[#10B981]/30">
-          <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+          <div className="w-full max-w-md mx-auto px-4 py-6 pb-8">
             <h3 className="text-lg font-bold text-white mb-4">Who Paid?</h3>
             
             <div className="space-y-4">
@@ -1953,7 +1989,7 @@ function SettlementDrawer({
   }
   
   return (
-    <div className="w-full max-w-md mx-auto px-2 py-6 pb-12">
+    <div className="w-full max-w-md mx-auto px-2 py-6 pb-8">
       <form onSubmit={handleSubmit}>
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-full bg-[#10B981] text-white flex items-center justify-center font-semibold">

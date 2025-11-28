@@ -84,7 +84,7 @@ function CreateGroupDrawer() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40" />
       )}
       <DrawerContent className="bg-[#101418] border-t border-[#10B981]/30 px-2">
-        <div className="w-full max-w-md mx-auto px-4 py-6 pb-12">
+        <div className="w-full max-w-md mx-auto px-4 py-6 pb-8">
           <h2 className="text-xl font-bold text-white mb-6">Create New Group</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

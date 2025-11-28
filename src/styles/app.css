@@ -61,13 +61,6 @@
     overscroll-behavior: contain;
   }
   
-  [data-vaul-drawer-direction="bottom"] [data-slot="drawer-content"] {
-    /* Use visual viewport height on iOS when keyboard is open */
-    max-height: var(--visual-viewport-height, 85dvh);
-    /* Smooth transition when keyboard opens/closes */
-    transition: max-height 0.1s ease-out;
-  }
-  
   /* Prevent input zoom on iOS Safari */
   input[type="text"],
   input[type="number"],
@@ -78,6 +71,14 @@
   select {
     font-size: 16px !important;
   }
+}
+
+/* Drawer scroll container fix for iOS Safari */
+[data-slot="drawer-content"] > div:last-child {
+  /* Ensure the scroll container can shrink and scroll properly */
+  min-height: 0;
+  flex: 1 1 auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Audiowide font utility */

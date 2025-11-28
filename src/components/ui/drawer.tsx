@@ -110,12 +110,12 @@ function DrawerContent({
   children,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
 
   // Handle input focus to prevent iOS keyboard issues
   React.useEffect(() => {
-    const scrollContainer = scrollContainerRef.current
-    if (!scrollContainer) return
+    const content = contentRef.current
+    if (!content) return
 
     const handleFocusIn = (e: FocusEvent) => {
       const target = e.target as HTMLElement
@@ -128,31 +128,38 @@ function DrawerContent({
       }
     }
 
-    scrollContainer.addEventListener('focusin', handleFocusIn)
-    return () => scrollContainer.removeEventListener('focusin', handleFocusIn)
+    content.addEventListener('focusin', handleFocusIn)
+    return () => content.removeEventListener('focusin', handleFocusIn)
   }, [])
 
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
       <DrawerPrimitive.Content
+        ref={contentRef}
         data-slot="drawer-content"
         className={cn(
-          "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
-          // iOS Safari fix: use visual viewport height when available
-          "supports-[height:100dvh]:max-h-[85dvh]",
+          "group/drawer-content bg-background fixed z-50 flex flex-col",
+          // Remove max-h constraints that cause iOS Safari issues - let content determine height
+          // Add safe area padding for iOS devices
+          "pb-[env(safe-area-inset-bottom)]",
           "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b",
           "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:rounded-t-lg data-[vaul-drawer-direction=bottom]:border-t",
           "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:border-l data-[vaul-drawer-direction=right]:sm:max-w-sm",
           "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:border-r data-[vaul-drawer-direction=left]:sm:max-w-sm",
           className
         )}
+        style={{
+          // Use CSS variable for dynamic height on iOS when keyboard is open
+          maxHeight: 'var(--visual-viewport-height, 85dvh)',
+          // Smooth transition when keyboard opens/closes
+          transition: 'max-height 0.15s ease-out',
+        }}
         {...props}
       >
         <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
         <div 
-          ref={scrollContainerRef}
-          className="overflow-y-auto overscroll-contain flex-1"
+          className="overflow-y-auto overscroll-contain flex-1 min-h-0"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {children}
